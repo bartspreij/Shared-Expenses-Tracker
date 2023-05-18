@@ -1,9 +1,20 @@
 package splitter.sharedexpenses;
 
+import javax.persistence.*;
 import java.util.Objects;
 
+@Entity
 public class Person implements Comparable<Person> {
-    private String name;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+
+    private final String name;
+
+    @OneToOne
+    @JoinColumn(name = "secret_santa_recipient")
+    private Person secretSantaRecipient;
 
     public Person(String name) {
         this.name = name;
@@ -11,6 +22,14 @@ public class Person implements Comparable<Person> {
 
     public String getName () {
         return name;
+    }
+
+    public Person getSecretSantaRecipient() {
+        return secretSantaRecipient;
+    }
+
+    public void setSecretSantaRecipient(Person p) {
+        secretSantaRecipient = p;
     }
 
     @Override

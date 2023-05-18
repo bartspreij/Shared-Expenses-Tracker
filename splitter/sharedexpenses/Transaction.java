@@ -1,14 +1,20 @@
 package splitter.sharedexpenses;
 
+import javax.persistence.*;
 import java.time.LocalDate;
-import java.util.Date;
 
+@Entity
 public class Transaction {
-    private LocalDate date;
-    private String type;
-    private String peoplePair;
-    private String reversePair;
-    private double amount;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long transactionId;
+
+    private final LocalDate date;
+    private final String peoplePair;
+    private final String reversePair;
+    private final String type;
+    private final double amount;
 
     public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
         this.date = date;

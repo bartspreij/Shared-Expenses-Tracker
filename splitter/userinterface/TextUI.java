@@ -5,8 +5,8 @@ import splitter.sharedexpenses.SplitterLogic;
 import java.util.Scanner;
 
 public class TextUI {
-    private Scanner scanner;
-    private SplitterLogic logic;
+    private final Scanner scanner;
+    private final SplitterLogic logic;
 
 
     public TextUI(Scanner scanner, SplitterLogic logic) {
@@ -26,18 +26,17 @@ public class TextUI {
 
             switch (usageOption) {
                 case HELP -> {
-                    System.out.println("balance");
-                    System.out.println("borrow");
-                    System.out.println("exit");
-                    System.out.println("group");
-                    System.out.println("help");
-                    System.out.println("purchase");
-                    System.out.println("repay");
+                    for (UsageOption option : UsageOption.values()) {
+                        System.out.println(option.toString());
+                    }
                 }
                 case BORROW, REPAY -> logic.borrowOrRepay(input);
                 case BALANCE -> logic.getBalance(input);
                 case GROUP -> logic.validateGroupInput(input);
                 case PURCHASE -> logic.purchaseExtractInfo(input);
+                case SECRET_SANTA -> logic.secretSanta(input);
+                case CASH_BACK -> logic.cashBackExtractInfo(input);
+                case WRITE_OFF -> logic.writeOff(input);
                 case EXIT -> {
                     return;
                 }

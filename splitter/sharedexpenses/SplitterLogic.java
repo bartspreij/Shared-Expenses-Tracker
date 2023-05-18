@@ -1,5 +1,9 @@
 package splitter.sharedexpenses;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import splitter.database.GroupRepository;
+import splitter.database.PersonRepository;
+import splitter.database.TransactionRepository;
 import splitter.userinterface.GroupOption;
 import splitter.userinterface.UsageOption;
 
@@ -14,11 +18,18 @@ public class SplitterLogic {
     private final ArrayList<Transaction> transactions;
     private final ArrayList<GroupOfPeople> groups;
     private final HashMap<String, Double> pairBalance;
+    private final TransactionRepository transactionRepository;
+    private final GroupRepository groupRepository;
+    private final PersonRepository personRepository;
 
-    public SplitterLogic() {
+    @Autowired
+    public SplitterLogic(TransactionRepository transactionRepository, GroupRepository groupRepository, PersonRepository personRepository) {
         this.transactions = new ArrayList<>();
         this.pairBalance = new HashMap<>();
         this.groups = new ArrayList<>();
+        this.transactionRepository = transactionRepository;
+        this.groupRepository = groupRepository;
+        this.personRepository = personRepository;
     }
 
     public ArrayList<GroupOfPeople> getGroups() {
@@ -32,6 +43,7 @@ public class SplitterLogic {
         Transaction transaction = new Transaction(date, type, peoplePair, reversePair, amount);
         updatePairBalance(transaction, this.pairBalance);
         transactions.add(transaction);
+        transactionRepository.save(transaction);
     }
 
     public GroupOfPeople getGroup(String grpName) {
@@ -44,16 +56,16 @@ public class SplitterLogic {
     }
 
     public UsageOption getUsageOption(String input) {
-        String[] usageString = input.toUpperCase().split(" ");
+        String[] usageString = input.split(" ");
 
         for (UsageOption option : UsageOption.values()) {
             for (String word : usageString) {
-                if (option.name().equals(word)) {
+                if (option.toString().equals(word)) {
                     return option;
                 }
             }
         }
-        return UsageOption.INVALID;
+        return null;
     }
 
     public GroupOption getGroupOption(String input) {
@@ -106,18 +118,13 @@ public class SplitterLogic {
 
     public void borrowOrRepay(String input) {
         LocalDate date = dateIncludedOrNot(input);
-        String type = null;
-        String borrower = null;
-        String lender = null;
-        double amount = 0;
-
         Matcher matcher = patternMatcher(RegexPatterns.BORROW_OR_REPAY, input);
 
         if (matcher.find()) {
-            type = matcher.group("type");
-            borrower = matcher.group("borrower");
-            lender = matcher.group("lender");
-            amount = Double.parseDouble(matcher.group("amount"));
+            String type = matcher.group("type");
+            String borrower = matcher.group("borrower");
+            String lender = matcher.group("lender");
+            double amount = Double.parseDouble(matcher.group("amount"));
             addTransaction(date, type, borrower, lender, amount);
         } else {
             System.out.println("Illegal command arguments");
@@ -136,21 +143,16 @@ public class SplitterLogic {
                         updatePairBalance(transaction, pairBalanceCalculatedWithDate);
                     }
                 }
-                printBalance(pairBalanceCalculatedWithDate); // print balance
             }
             case "close" -> {
-                if (date.isEqual(LocalDate.now())) { // date is now print current balance
-                    printBalance(pairBalance);
-                    break;
-                }
                 for (Transaction transaction : transactions) {
-                    if (transaction.getDate().compareTo(date) <= 0) {
+                    if (!transaction.getDate().isAfter(date)) {
                         updatePairBalance(transaction, pairBalanceCalculatedWithDate);
                     }
                 }
-                printBalance(pairBalanceCalculatedWithDate); // print balance
             }
         }
+        printBalance(pairBalanceCalculatedWithDate); // print balance
     }
 
     public LocalDate dateIncludedOrNot(String input) {
@@ -178,10 +180,9 @@ public class SplitterLogic {
                 System.out.printf("%s owes %s %.2f\n", names[1], names[0], Math.abs(mapToPrint.get(key)));
                 anyRepayments = true;
             }
-            ;
         }
         if (!anyRepayments) {
-            System.out.println("No repayments");
+            System.out.println("No repayments need");
         }
     }
 
@@ -214,6 +215,7 @@ public class SplitterLogic {
     public void createGroup(String groupName, String listOfPeopleAndGroups) {
         ArrayList<Person> peopleToCreateGroupFrom = extractTemporaryGroupFromInput(listOfPeopleAndGroups).getPeople();
         groups.add(new GroupOfPeople(groupName, peopleToCreateGroupFrom));
+        personRepository.saveAll(peopleToCreateGroupFrom);
     }
 
     public void addToGroup(String groupName, String listOfPeopleAndGroups) {
@@ -295,17 +297,26 @@ public class SplitterLogic {
         return true;
     }
 
-    public void purchaseExtractInfo(String input) {
+    public void extractInfo(String input, boolean isCashBack) {
         LocalDate date = dateIncludedOrNot(input);
-        Matcher matcher = patternMatcher(RegexPatterns.PURCHASE_EXTRACT_INFO, input);
+        Matcher matcher = patternMatcher(isCashBack ? RegexPatterns.CASHBACK_EXTRACT_INFO : RegexPatterns.PURCHASE_EXTRACT_INFO, input);
 
         if (matcher.find()) {
             String payer = matcher.group(1);
             String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
             String participants = matcher.group(4);
-            purchase(date, payer, product, amount, participants);
+            double adjustedAmount = isCashBack ? -amount : amount;
+            purchase(date, payer, product, adjustedAmount, participants);
         }
+    }
+
+    public void purchaseExtractInfo(String input) {
+        extractInfo(input, false);
+    }
+
+    public void cashBackExtractInfo(String input) {
+        extractInfo(input, true);
     }
 
     public void purchase(LocalDate date, String payer, String product, double amount, String participants) {
@@ -350,6 +361,48 @@ public class SplitterLogic {
         Pattern pattern = Pattern.compile(REGEX);
         return pattern.matcher(input);
     }
+
+    public void secretSanta(String input) {
+        String groupName = input.split(" ")[1];
+
+        ArrayList<Person> peopleSorted = getGroup(groupName).getPeople();
+        ArrayList<Person> peopleRandomized = new ArrayList<>(peopleSorted);
+        Random random = new Random();
+        Collections.shuffle(peopleRandomized, random);
+
+        for (Person giver : peopleSorted) {
+            for (Person receiver  : peopleRandomized) {
+
+                if (!giver.equals(receiver) &&
+                        (receiver.getSecretSantaRecipient() == null || !receiver.getSecretSantaRecipient().equals(giver))) {
+
+                    System.out.printf("%s gift to %s\n", giver, receiver);
+                    giver.setSecretSantaRecipient(receiver);
+                    peopleRandomized.remove(receiver);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void writeOff(String input) {
+        LocalDate date = dateIncludedOrNot(input);
+        String openOrClose = input.contains("open") ? "open" : "close";
+
+        switch (openOrClose) {
+            case "open" -> {
+                transactions.removeIf(transaction -> transaction.getDate().isBefore(date.withDayOfMonth(1)));
+            }
+            case "close" -> {
+                if (date.isEqual(LocalDate.now())) { // date is write off everything before today
+                    transactions.removeIf(transaction -> !transaction.getDate().isAfter(LocalDate.now()));
+                    break;
+                }
+                transactions.removeIf(transaction -> !transaction.getDate().isAfter(date));
+            }
+        }
+    }
 }
+
 
 

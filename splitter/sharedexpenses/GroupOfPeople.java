@@ -1,23 +1,25 @@
 package splitter.sharedexpenses;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import java.util.ArrayList;
+import javax.persistence.*;
 import java.util.Collections;
+import java.util.List;
 
 @Entity
 public class GroupOfPeople {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long transactionId;
+    private long id;
 
-    private ArrayList<Person> people;
+    @ElementCollection
+    @OneToMany(fetch = FetchType.EAGER)
+    private List<Person> people;
+
     private String name;
 
-    public GroupOfPeople(String name, ArrayList<Person> people) {
+    public GroupOfPeople() {}
+
+    public GroupOfPeople(String name, List<Person> people) {
         this.name = name;
         this.people = people;
     }
@@ -26,7 +28,7 @@ public class GroupOfPeople {
         return name;
     }
 
-    public ArrayList<Person> getPeople() {
+    public List<Person> getPeople() {
         Collections.sort(people);
         return people;
     }
@@ -39,7 +41,7 @@ public class GroupOfPeople {
         this.name = name;
     };
 
-    public void setListOfPeople(ArrayList<Person> listOfpPeople) {
+    public void setListOfPeople(List<Person> listOfpPeople) {
         this.people = listOfpPeople;
     }
 

@@ -10,11 +10,13 @@ public class Person implements Comparable<Person> {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private final String name;
+    private String name;
 
     @OneToOne
     @JoinColumn(name = "secret_santa_recipient")
     private Person secretSantaRecipient;
+
+    public Person() {};
 
     public Person(String name) {
         this.name = name;

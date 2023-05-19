@@ -7,6 +7,7 @@ import splitter.database.TransactionRepository;
 import splitter.userinterface.GroupOption;
 import splitter.userinterface.UsageOption;
 
+import javax.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -34,6 +35,10 @@ public class SplitterLogic {
 
     public ArrayList<GroupOfPeople> getGroups() {
         return groups;
+    }
+
+    public void addTransaction(Transaction t) {
+        transactions.add(t);
     }
 
     public void addTransaction(LocalDate date, String type, String borrower, String lender, double amount) {
@@ -65,7 +70,7 @@ public class SplitterLogic {
                 }
             }
         }
-        return null;
+        return UsageOption.DEFAULT;
     }
 
     public GroupOption getGroupOption(String input) {
@@ -165,19 +170,21 @@ public class SplitterLogic {
     }
 
     public void printBalance(HashMap<String, Double> mapToPrint) {
-        TreeMap<String, Double> sortedMapToPrint = new TreeMap<>(mapToPrint);
+        TreeMap<String, Double> sortedMap = new TreeMap<>(mapToPrint);
+
+
         boolean anyRepayments = false;
         String[] names;
 
-        for (String key : sortedMapToPrint.keySet()) {
-            if (sortedMapToPrint.get(key) > 0.01) {
+        for (String key : sortedMap.keySet()) {
+            if (mapToPrint.get(key) > 0.01) {
                 names = key.split(" ");
-                System.out.printf("%s owes %s %.2f\n", names[0], names[1], mapToPrint.get(key));
+                System.out.printf("%s owes %s %.2f\n", names[0], names[1], sortedMap.get(key));
                 anyRepayments = true;
 
-            } else if (sortedMapToPrint.get(key) < -0.01) {
+            } else if (sortedMap.get(key) < -0.01) {
                 names = key.split(" ");
-                System.out.printf("%s owes %s %.2f\n", names[1], names[0], Math.abs(mapToPrint.get(key)));
+                System.out.printf("%s owes %s %.2f\n", names[1], names[0], Math.abs(sortedMap.get(key)));
                 anyRepayments = true;
             }
         }
@@ -213,9 +220,19 @@ public class SplitterLogic {
     }
 
     public void createGroup(String groupName, String listOfPeopleAndGroups) {
-        ArrayList<Person> peopleToCreateGroupFrom = extractTemporaryGroupFromInput(listOfPeopleAndGroups).getPeople();
-        groups.add(new GroupOfPeople(groupName, peopleToCreateGroupFrom));
+        List<Person> peopleToCreateGroupFrom = extractTemporaryGroupFromInput(listOfPeopleAndGroups).getPeople();
         personRepository.saveAll(peopleToCreateGroupFrom);
+        groupRepository.save(new GroupOfPeople(groupName, peopleToCreateGroupFrom));
+        groups.add(new GroupOfPeople(groupName, peopleToCreateGroupFrom));
+
+    }
+
+    public void addGroup(GroupOfPeople group) {
+        groups.add(group);
+    }
+
+    public void addPerson() {
+
     }
 
     public void addToGroup(String groupName, String listOfPeopleAndGroups) {
@@ -365,8 +382,8 @@ public class SplitterLogic {
     public void secretSanta(String input) {
         String groupName = input.split(" ")[1];
 
-        ArrayList<Person> peopleSorted = getGroup(groupName).getPeople();
-        ArrayList<Person> peopleRandomized = new ArrayList<>(peopleSorted);
+        List<Person> peopleSorted = getGroup(groupName).getPeople();
+        List<Person> peopleRandomized = new ArrayList<>(peopleSorted);
         Random random = new Random();
         Collections.shuffle(peopleRandomized, random);
 
@@ -385,6 +402,7 @@ public class SplitterLogic {
         }
     }
 
+    @Transactional
     public void writeOff(String input) {
         LocalDate date = dateIncludedOrNot(input);
         String openOrClose = input.contains("open") ? "open" : "close";
@@ -392,13 +410,16 @@ public class SplitterLogic {
         switch (openOrClose) {
             case "open" -> {
                 transactions.removeIf(transaction -> transaction.getDate().isBefore(date.withDayOfMonth(1)));
+                transactionRepository.deleteByDateIsLessThan(date.withDayOfMonth(1));
             }
             case "close" -> {
                 if (date.isEqual(LocalDate.now())) { // date is write off everything before today
                     transactions.removeIf(transaction -> !transaction.getDate().isAfter(LocalDate.now()));
+                    transactionRepository.deleteByDateIsLessThanEqual(LocalDate.now());
                     break;
                 }
                 transactions.removeIf(transaction -> !transaction.getDate().isAfter(date));
+                transactionRepository.deleteByDateIsLessThanEqual(date);
             }
         }
     }

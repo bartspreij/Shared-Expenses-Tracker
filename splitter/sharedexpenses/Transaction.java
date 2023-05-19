@@ -10,11 +10,15 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long transactionId;
 
-    private final LocalDate date;
-    private final String peoplePair;
-    private final String reversePair;
-    private final String type;
-    private final double amount;
+    @Column(columnDefinition = "DATE")
+    private LocalDate date;
+
+    private String peoplePair;
+    private String reversePair;
+    private String type;
+    private double amount;
+
+    public Transaction() {};
 
     public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
         this.date = date;

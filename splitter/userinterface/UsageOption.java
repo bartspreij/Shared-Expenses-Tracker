@@ -10,7 +10,8 @@ public enum UsageOption {
     PURCHASE("purchase"),
     REPAY("repay"),
     SECRET_SANTA("secretSanta"),
-    WRITE_OFF("writeOff");
+    WRITE_OFF("writeOff"),
+    DEFAULT("");
 
 
     private final String nameForPrint;

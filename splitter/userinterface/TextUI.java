@@ -1,5 +1,6 @@
 package splitter.userinterface;
 
+import splitter.database.DB;
 import splitter.sharedexpenses.SplitterLogic;
 
 import java.util.Scanner;
@@ -7,11 +8,13 @@ import java.util.Scanner;
 public class TextUI {
     private final Scanner scanner;
     private final SplitterLogic logic;
+    private final DB db;
 
 
-    public TextUI(Scanner scanner, SplitterLogic logic) {
+    public TextUI(Scanner scanner, SplitterLogic logic, DB db) {
         this.logic = logic;
         this.scanner = scanner;
+        this.db = db;
     }
 
     public void start() {
@@ -27,7 +30,9 @@ public class TextUI {
             switch (usageOption) {
                 case HELP -> {
                     for (UsageOption option : UsageOption.values()) {
-                        System.out.println(option.toString());
+                        if (!option.equals(UsageOption.DEFAULT)) {
+                            System.out.println(option);
+                        }
                     }
                 }
                 case BORROW, REPAY -> logic.borrowOrRepay(input);
@@ -40,6 +45,7 @@ public class TextUI {
                 case EXIT -> {
                     return;
                 }
+
                 default -> System.out.println("Unknown command. Print help to show commands list");
             }
         }

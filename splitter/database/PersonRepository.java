@@ -6,4 +6,5 @@ import splitter.sharedexpenses.Person;
 
 @Repository
 public interface PersonRepository extends CrudRepository<Person, Long> {
+
 }

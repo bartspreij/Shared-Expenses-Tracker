@@ -1,19 +1,25 @@
 package splitter.sharedexpenses;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.util.Objects;
 
+@Setter
+@Getter
 @Entity
 public class Person implements Comparable<Person> {
 
     @Id
+    @Column(name = "person_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     private String name;
 
     @OneToOne
-    @JoinColumn(name = "secret_santa_recipient")
+    @JoinColumn(name = "secret_santa_recipient_id")
     private Person secretSantaRecipient;
 
     public Person() {};
@@ -22,7 +28,7 @@ public class Person implements Comparable<Person> {
         this.name = name;
     }
 
-    public String getName () {
+    public String getName() {
         return name;
     }
 

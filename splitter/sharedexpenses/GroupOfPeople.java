@@ -1,19 +1,26 @@
 package splitter.sharedexpenses;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Setter
+@Getter
 @Entity
+@Table
 public class GroupOfPeople {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @ElementCollection
-    @OneToMany(fetch = FetchType.EAGER)
-    private List<Person> people;
+    @OneToMany
+    @JoinColumn(name = "group_id")
+    private List<Person> people = new ArrayList<>();
 
     private String name;
 
@@ -24,8 +31,8 @@ public class GroupOfPeople {
         this.people = people;
     }
 
-    public String getName() {
-        return name;
+    public long getId() {
+        return id;
     }
 
     public List<Person> getPeople() {
@@ -37,16 +44,12 @@ public class GroupOfPeople {
         return people.size();
     }
 
-    public void setName(String name) {
-        this.name = name;
-    };
-
-    public void setListOfPeople(List<Person> listOfpPeople) {
-        this.people = listOfpPeople;
-    }
-
     public void add(Person person) {
         people.add(person);
+    }
+
+    public void addPeople(List<Person> peopleToAdd) {
+        people.addAll(peopleToAdd);
     }
 
     public void remove(Person person) {

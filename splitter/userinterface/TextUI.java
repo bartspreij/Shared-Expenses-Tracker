@@ -36,7 +36,7 @@ public class TextUI {
                     }
                 }
                 case BORROW, REPAY -> logic.borrowOrRepay(input);
-                case BALANCE -> logic.getBalance(input);
+                case BALANCE -> logic.printBalance(input);
                 case GROUP -> logic.validateGroupInput(input);
                 case PURCHASE -> logic.purchaseExtractInfo(input);
                 case SECRET_SANTA -> logic.secretSanta(input);

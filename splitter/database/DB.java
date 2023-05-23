@@ -1,7 +1,6 @@
 package splitter.database;
 
 import splitter.sharedexpenses.GroupOfPeople;
-import splitter.sharedexpenses.Person;
 import splitter.sharedexpenses.SplitterLogic;
 import splitter.sharedexpenses.Transaction;
 
@@ -19,11 +18,6 @@ public class DB {
         this.splitterLogic = splitterLogic;
     }
 
-    public void loadDB() {
-        loadGroups();
-        loadTransactions();
-    }
-
     public void loadGroups() {
         Iterable<GroupOfPeople> entities = groupRepository.findAll();
 
@@ -39,13 +33,4 @@ public class DB {
             splitterLogic.addTransaction(t);
         }
     }
-
-    public void loadPeople() {
-        Iterable<Person> entities = personRepository.findAll();
-
-        for (Person p : entities) {
-
-        }
-    }
-
 }

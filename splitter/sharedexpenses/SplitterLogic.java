@@ -1,9 +1,9 @@
 package splitter.sharedexpenses;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import splitter.database.GroupRepository;
-import splitter.database.PersonRepository;
-import splitter.database.TransactionRepository;
+import splitter.repositories.GroupRepository;
+import splitter.repositories.PersonRepository;
+import splitter.repositories.TransactionRepository;
 import splitter.userinterface.GroupOption;
 import splitter.userinterface.UsageOption;
 
@@ -29,20 +29,11 @@ public class SplitterLogic {
         this.personRepository = personRepository;
     }
 
-    public ArrayList<GroupOfPeople> getGroups() {
-        return (ArrayList<GroupOfPeople>) groupRepository.findAll();
-    }
-
-    public void addTransaction(Transaction t) {
-        transactionRepository.save(t);
-    }
-
-    public void addTransaction(LocalDate date, String type, String borrower, String lender, double amount) {
-        String peoplePair = borrower + " " + lender;
-        String reversePair = lender + " " + borrower;
+    public void addTransaction(LocalDate date, String type, Person borrower, Person lender, double amount) {
+        String peoplePair = borrower.getName() + " " + lender.getName();
+        String reversePair = lender.getName() + " " + borrower.getName();
 
         Transaction transaction = new Transaction(date, type, peoplePair, reversePair, amount);
-        updatePairBalance(transaction, this.pairBalance);
         transactionRepository.save(transaction);
     }
 
@@ -120,13 +111,33 @@ public class SplitterLogic {
 
         if (matcher.find()) {
             String type = matcher.group("type");
-            String borrower = matcher.group("borrower");
-            String lender = matcher.group("lender");
+            Person borrower = fetchOrAddPerson(matcher.group("borrower"));
+            Person lender = fetchOrAddPerson(matcher.group("lender"));
             double amount = Double.parseDouble(matcher.group("amount"));
             addTransaction(date, type, borrower, lender, amount);
         } else {
             System.out.println("Illegal command arguments");
         }
+    }
+
+    public Person fetchOrAddPerson(String name) {
+        Person person = personRepository.findByName(name);
+
+        if (person == null) {
+            person = new Person(name);
+            personRepository.save(person);
+        }
+        return person;
+    }
+
+    public List<Person> fetchOrAddParticipants(String participants) {
+        GroupOfPeople participantsGroup = extractTemporaryGroupFromInput(participants);
+        List<Person> participantsList = new ArrayList<>();
+        for (Person p : participantsGroup.getPeople()) { // check db for person if not there add
+            Person person = fetchOrAddPerson(p.getName());
+            participantsList.add(person);
+        }
+        return participantsList;
     }
 
     public Map<String, Double> getBalance(String input) {
@@ -231,20 +242,10 @@ public class SplitterLogic {
     }
 
     public void createGroup(String groupName, String listOfPeopleAndGroups) {
-        //TODO: Refactor createGroup / addGroup / addToGroup so groupRepository.findByName(name) return unique results
-        List<Person> peopleToCreateGroupFrom = extractTemporaryGroupFromInput(listOfPeopleAndGroups).getPeople();
-        addPeople(peopleToCreateGroupFrom);
-
-        GroupOfPeople createdGroup = new GroupOfPeople(groupName, peopleToCreateGroupFrom);
+        GroupOfPeople createdGroup = extractTemporaryGroupFromInput(listOfPeopleAndGroups);
+        createdGroup.setName(groupName);
+        personRepository.saveAll(createdGroup.getPeople());
         groupRepository.saveOrUpdate(createdGroup);
-    }
-
-    public void addGroup(GroupOfPeople group) {
-        groupRepository.saveOrUpdate(group);
-    }
-
-    public void addPeople(List<Person> peopleToAdd) {
-        personRepository.saveAll(peopleToAdd);
     }
 
     public void addToGroup(String groupNameToAddTo, String peopleToAdd) {
@@ -281,13 +282,14 @@ public class SplitterLogic {
         Matcher matcher = patternMatcher(RegexPatterns.EXTRACT_NAME_OR_GROUP, listOfPersonsAndOrGroups);
 
         while (matcher.find()) {
-            if (isStringUpperCase(matcher.group("name"))) { // it's a group
-                GroupOfPeople fetchedGroup = groupRepository.findByName(matcher.group("name"));
+            String name = matcher.group("name");
+            if (isStringUpperCase(name)) { // it's a group
+                GroupOfPeople fetchedGroup = groupRepository.findByName(name);
                 for (Person person : fetchedGroup.getPeople()) {
                     TMP.add(person);
                 }
             } else { // it's a person
-                TMP.add(new Person(matcher.group("name")));
+                TMP.add(new Person(name));
             }
         }
     }
@@ -310,7 +312,7 @@ public class SplitterLogic {
     }
 
     public GroupOfPeople extractTemporaryGroupFromInput(String listOfPeopleAndGroups) {
-        GroupOfPeople TMP = new GroupOfPeople("TMP", new ArrayList<>());
+        GroupOfPeople TMP = new GroupOfPeople("TMP");
         collectAllPeopleExceptPrefixMinus(TMP, listOfPeopleAndGroups);
         removePrefixMinusFromGroup(TMP, listOfPeopleAndGroups);
 
@@ -333,28 +335,29 @@ public class SplitterLogic {
         Matcher matcher = patternMatcher(isCashBack ? RegexPatterns.CASHBACK_EXTRACT_INFO : RegexPatterns.PURCHASE_EXTRACT_INFO, input);
 
         if (matcher.find()) {
-            String payer = matcher.group(1);
+            Person payer = fetchOrAddPerson(matcher.group(1));
             String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
-            String participants = matcher.group(4);
+            List<Person> participants = fetchOrAddParticipants(matcher.group(4));
             double adjustedAmount = isCashBack ? -amount : amount;
             purchase(date, payer, product, adjustedAmount, participants);
         }
     }
 
+    @Transactional
     public void purchaseExtractInfo(String input) {
         extractInfo(input, false);
     }
 
+    @Transactional
     public void cashBackExtractInfo(String input) {
         extractInfo(input, true);
     }
 
-    public void purchase(LocalDate date, String payer, String product, double amount, String participants) {
+    @Transactional
+    public void purchase(LocalDate date, Person payer, String product, double amount, List<Person> participantsList) {
         //TODO: refactor, use actual BigDecimal
-        GroupOfPeople participantsGroup = extractTemporaryGroupFromInput(participants);
-
-        if (participantsGroup.getSizeOfGroup() == 0) {
+        if (participantsList.size() == 0) {
             System.out.println("Group is empty");
             return;
         }
@@ -365,7 +368,7 @@ public class SplitterLogic {
 
         // Turn values into BigDecimal
         BigDecimal amountDB = BigDecimal.valueOf(amount);
-        BigDecimal sizeOfGroup = BigDecimal.valueOf(participantsGroup.getSizeOfGroup());
+        BigDecimal sizeOfGroup = BigDecimal.valueOf(participantsList.size());
 
         // Calculate amount per person and remainder
         BigDecimal amountPerPerson = amountDB.divide(sizeOfGroup, DECIMAL_PLACES, RoundingMode.DOWN);
@@ -374,16 +377,16 @@ public class SplitterLogic {
         // back to double
         amount = amountPerPerson.doubleValue();
 
-        for (Person person : participantsGroup.getPeople()) {
-            if (person.getName().equals(payer)) {
+        for (Person person : participantsList) {
+            if (person.equals(payer)) {
                 remainderBD = remainderBD.subtract(BigDecimal.valueOf(CENT)); // remainder left or not remove cent
                 continue;
             }
             if (remainderBD.compareTo(BigDecimal.ZERO) > 0) { // while there is remainder left
-                addTransaction(date, "borrow", person.getName(), payer, amount + CENT);
+                addTransaction(date, "borrow", person, payer, amount + CENT);
                 remainderBD = remainderBD.subtract(BigDecimal.valueOf(CENT)); // we remove the cent
             } else {
-                addTransaction(date, "borrow", person.getName(), payer, amount);
+                addTransaction(date, "borrow", person, payer, amount);
             }
         }
     }
@@ -393,11 +396,12 @@ public class SplitterLogic {
         return pattern.matcher(input);
     }
 
+    @Transactional
     public void secretSanta(String input) {
         String groupName = input.split(" ")[1];
-
-        List<Person> peopleSorted = getGroup(groupName).getPeople();
-        List<Person> peopleRandomized = new ArrayList<>(peopleSorted);
+        List<Person> peopleRandomized = groupRepository.findByName(groupName).getPeople();
+        List<Person> peopleSorted = new ArrayList<>(peopleRandomized);
+        Collections.sort(peopleSorted);
         Random random = new Random();
         Collections.shuffle(peopleRandomized, random);
 
@@ -422,9 +426,7 @@ public class SplitterLogic {
         String openOrClose = input.contains("open") ? "open" : "close";
 
         switch (openOrClose) {
-            case "open" -> {
-                transactionRepository.deleteByDateIsLessThan(date.withDayOfMonth(1));
-            }
+            case "open" -> transactionRepository.deleteByDateIsLessThan(date.withDayOfMonth(1));
             case "close" -> {
                 if (date.isEqual(LocalDate.now())) { // date is write off everything before today
                     transactionRepository.deleteByDateIsLessThanEqual(LocalDate.now());

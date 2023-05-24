@@ -1,14 +1,11 @@
 package splitter.sharedexpenses;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import javax.persistence.*;
+import java.util.List;
 import java.util.Objects;
 
-@Setter
-@Getter
 @Entity
+@Table(name = "PEOPLE")
 public class Person implements Comparable<Person> {
 
     @Id
@@ -16,6 +13,10 @@ public class Person implements Comparable<Person> {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @ManyToMany(mappedBy = "people")
+    private List<GroupOfPeople> groups;
+
+    @Column(unique = true)
     private String name;
 
     @OneToOne
@@ -31,6 +32,8 @@ public class Person implements Comparable<Person> {
     public String getName() {
         return name;
     }
+
+    public long getId() { return id; }
 
     public Person getSecretSantaRecipient() {
         return secretSantaRecipient;
@@ -55,11 +58,11 @@ public class Person implements Comparable<Person> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Person person = (Person) o;
-        return Objects.equals(name, person.name);
+        return id == person.id && Objects.equals(name, person.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(id, name);
     }
 }

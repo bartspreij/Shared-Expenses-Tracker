@@ -4,6 +4,7 @@ import javax.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "TRANSACTIONS")
 public class Transaction {
 
     @Id
@@ -18,7 +19,7 @@ public class Transaction {
     private String type;
     private double amount;
 
-    public Transaction() {};
+    public Transaction() {}
 
     public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
         this.date = date;

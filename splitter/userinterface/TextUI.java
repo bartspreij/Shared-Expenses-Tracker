@@ -1,6 +1,5 @@
 package splitter.userinterface;
 
-import splitter.database.DB;
 import splitter.sharedexpenses.SplitterLogic;
 
 import java.util.Scanner;
@@ -8,13 +7,10 @@ import java.util.Scanner;
 public class TextUI {
     private final Scanner scanner;
     private final SplitterLogic logic;
-    private final DB db;
 
-
-    public TextUI(Scanner scanner, SplitterLogic logic, DB db) {
+    public TextUI(Scanner scanner, SplitterLogic logic) {
         this.logic = logic;
         this.scanner = scanner;
-        this.db = db;
     }
 
     public void start() {

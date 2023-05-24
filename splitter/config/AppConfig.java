@@ -2,10 +2,9 @@ package splitter.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import splitter.database.DB;
-import splitter.database.GroupRepository;
-import splitter.database.PersonRepository;
-import splitter.database.TransactionRepository;
+import splitter.repositories.GroupRepository;
+import splitter.repositories.PersonRepository;
+import splitter.repositories.TransactionRepository;
 import splitter.sharedexpenses.SplitterLogic;
 import splitter.userinterface.TextUI;
 
@@ -24,13 +23,8 @@ public class AppConfig {
     }
 
     @Bean
-    public DB db(TransactionRepository transactionRepository, GroupRepository groupRepository, PersonRepository personRepository, SplitterLogic splitterLogic){
-        return new DB(groupRepository, personRepository, transactionRepository, splitterLogic);
-    }
-
-    @Bean
-    public TextUI textUI(Scanner scanner, SplitterLogic splitterLogic, DB db) {
-        return new TextUI(scanner, splitterLogic, db);
+    public TextUI textUI(Scanner scanner, SplitterLogic splitterLogic) {
+        return new TextUI(scanner, splitterLogic);
     }
 }
 

@@ -4,20 +4,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import splitter.database.DB;
+
 import splitter.userinterface.TextUI;
 
 
 @SpringBootApplication
 public class Main implements CommandLineRunner {
     private final TextUI ui;
-    private final DB db;
-
 
     @Autowired
-    public Main(TextUI ui, DB db) {
+    public Main(TextUI ui) {
         this.ui = ui;
-        this.db = db;
     }
 
     public static void main(String[] args) {
@@ -28,6 +25,5 @@ public class Main implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         ui.start();
-
     }
 }

@@ -1,4 +1,4 @@
-package com.bartspreij.splitter.cli;
+package com.splitter.cli;
 
 public enum GroupOption {
     SHOW,

@@ -1,6 +1,6 @@
-package com.bartspreij.splitter.cli;
+package com.splitter.cli;
 
-import com.bartspreij.splitter.logic.SplitterLogic;
+import com.splitter.logic.SplitterLogic;
 
 import java.util.Scanner;
 

@@ -1,4 +1,4 @@
-package com.bartspreij.splitter.logic;
+package com.splitter.logic;
 
 public class RegexPatterns {
     public static final String DATE_PATTERN = "(?<date>\\d{4}[.]\\d{2}[.]\\d{2})";

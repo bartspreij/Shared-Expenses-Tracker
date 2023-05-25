@@ -1,10 +1,10 @@
-package com.bartspreij.splitter.app;
+package com.splitter.app;
 
-import com.bartspreij.splitter.cli.TextUI;
-import com.bartspreij.splitter.logic.SplitterLogic;
-import com.bartspreij.splitter.repository.GroupRepository;
-import com.bartspreij.splitter.repository.PersonRepository;
-import com.bartspreij.splitter.repository.TransactionRepository;
+import com.splitter.cli.TextUI;
+import com.splitter.logic.SplitterLogic;
+import com.splitter.repositories.GroupRepository;
+import com.splitter.repositories.PersonRepository;
+import com.splitter.repositories.TransactionRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

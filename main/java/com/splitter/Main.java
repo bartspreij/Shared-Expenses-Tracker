@@ -1,6 +1,6 @@
-package com.bartspreij.splitter;
+package com.splitter;
 
-import com.bartspreij.splitter.cli.TextUI;
+import com.splitter.cli.TextUI;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

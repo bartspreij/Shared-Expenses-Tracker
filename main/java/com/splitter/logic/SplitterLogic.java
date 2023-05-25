@@ -1,13 +1,13 @@
-package com.bartspreij.splitter.logic;
+package com.splitter.logic;
 
-import com.bartspreij.splitter.cli.GroupOption;
-import com.bartspreij.splitter.cli.UsageOption;
-import com.bartspreij.splitter.model.GroupOfPeople;
-import com.bartspreij.splitter.model.Person;
-import com.bartspreij.splitter.model.Transaction;
-import com.bartspreij.splitter.repository.GroupRepository;
-import com.bartspreij.splitter.repository.PersonRepository;
-import com.bartspreij.splitter.repository.TransactionRepository;
+import com.splitter.cli.GroupOption;
+import com.splitter.cli.UsageOption;
+import com.splitter.entities.GroupOfPeople;
+import com.splitter.entities.Person;
+import com.splitter.entities.Transaction;
+import com.splitter.repositories.GroupRepository;
+import com.splitter.repositories.PersonRepository;
+import com.splitter.repositories.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.transaction.Transactional;
@@ -412,7 +412,6 @@ public class SplitterLogic {
         String groupName = input.split(" ")[1];
         List<Person> peopleRandomized = getGroup(groupName).getPeople();
         List<Person> peopleSorted = new ArrayList<>(peopleRandomized);
-        Collections.sort(peopleSorted);
         Random random = new Random();
         Collections.shuffle(peopleRandomized, random);
 

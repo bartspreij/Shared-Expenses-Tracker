@@ -1,8 +1,13 @@
-package com.bartspreij.splitter.model;
+package com.splitter.entities;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.time.LocalDate;
 
+@NoArgsConstructor
+@Data
 @Entity
 @Table(name = "TRANSACTIONS")
 public class Transaction {
@@ -18,8 +23,6 @@ public class Transaction {
     private String reversePair;
     private String type;
     private double amount;
-
-    public Transaction() {}
 
     public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
         this.date = date;

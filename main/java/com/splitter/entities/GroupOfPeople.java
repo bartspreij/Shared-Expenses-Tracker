@@ -1,10 +1,15 @@
-package com.bartspreij.splitter.model;
+package com.splitter.entities;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@NoArgsConstructor
+@Data
 @Entity
 @Table(name = "GROUPS")
 public class GroupOfPeople {
@@ -14,6 +19,7 @@ public class GroupOfPeople {
     private long id;
 
     @ManyToMany(cascade = {CascadeType.MERGE}, fetch = FetchType.EAGER)
+    @OrderBy("name ASC")
     @JoinTable(
             name = "GROUP_PERSON",
             joinColumns = @JoinColumn(name = "group_id"),
@@ -23,8 +29,6 @@ public class GroupOfPeople {
 
     @Column(unique = true)
     private String name;
-
-    public GroupOfPeople() {}
 
     public GroupOfPeople(String name) {
         this.name = name;
@@ -40,10 +44,6 @@ public class GroupOfPeople {
 
     public int getSizeOfGroup() {
         return people.size();
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public void add(Person person) {

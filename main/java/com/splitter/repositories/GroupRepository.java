@@ -1,6 +1,6 @@
-package com.bartspreij.splitter.repository;
+package com.splitter.repositories;
 
-import com.bartspreij.splitter.model.GroupOfPeople;
+import com.splitter.entities.GroupOfPeople;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,4 +1,4 @@
-package splitter.sharedexpenses;
+package com.bartspreij.splitter.model;
 
 import javax.persistence.*;
 import java.util.ArrayList;

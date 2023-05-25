@@ -1,12 +1,12 @@
-package splitter.config;
+package com.bartspreij.splitter.app;
 
+import com.bartspreij.splitter.cli.TextUI;
+import com.bartspreij.splitter.logic.SplitterLogic;
+import com.bartspreij.splitter.repository.GroupRepository;
+import com.bartspreij.splitter.repository.PersonRepository;
+import com.bartspreij.splitter.repository.TransactionRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import splitter.repositories.GroupRepository;
-import splitter.repositories.PersonRepository;
-import splitter.repositories.TransactionRepository;
-import splitter.sharedexpenses.SplitterLogic;
-import splitter.userinterface.TextUI;
 
 import java.util.Scanner;
 

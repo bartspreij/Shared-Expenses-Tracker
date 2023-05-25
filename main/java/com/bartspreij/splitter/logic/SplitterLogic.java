@@ -1,11 +1,14 @@
-package splitter.sharedexpenses;
+package com.bartspreij.splitter.logic;
 
+import com.bartspreij.splitter.cli.GroupOption;
+import com.bartspreij.splitter.cli.UsageOption;
+import com.bartspreij.splitter.model.GroupOfPeople;
+import com.bartspreij.splitter.model.Person;
+import com.bartspreij.splitter.model.Transaction;
+import com.bartspreij.splitter.repository.GroupRepository;
+import com.bartspreij.splitter.repository.PersonRepository;
+import com.bartspreij.splitter.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import splitter.repositories.GroupRepository;
-import splitter.repositories.PersonRepository;
-import splitter.repositories.TransactionRepository;
-import splitter.userinterface.GroupOption;
-import splitter.userinterface.UsageOption;
 
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
@@ -16,14 +19,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SplitterLogic {
-    private final HashMap<String, Double> pairBalance;
     private final TransactionRepository transactionRepository;
     private final GroupRepository groupRepository;
     private final PersonRepository personRepository;
 
     @Autowired
     public SplitterLogic(TransactionRepository transactionRepository, GroupRepository groupRepository, PersonRepository personRepository) {
-        this.pairBalance = new HashMap<>();
         this.transactionRepository = transactionRepository;
         this.groupRepository = groupRepository;
         this.personRepository = personRepository;

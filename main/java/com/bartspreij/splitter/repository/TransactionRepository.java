@@ -1,8 +1,8 @@
-package splitter.repositories;
+package com.bartspreij.splitter.repository;
 
+import com.bartspreij.splitter.model.Transaction;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-import splitter.sharedexpenses.Transaction;
 
 import java.time.LocalDate;
 

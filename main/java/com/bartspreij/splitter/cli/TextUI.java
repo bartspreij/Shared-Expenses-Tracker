@@ -1,6 +1,6 @@
-package splitter.userinterface;
+package com.bartspreij.splitter.cli;
 
-import splitter.sharedexpenses.SplitterLogic;
+import com.bartspreij.splitter.logic.SplitterLogic;
 
 import java.util.Scanner;
 

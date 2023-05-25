@@ -1,12 +1,10 @@
-package splitter;
+package com.bartspreij.splitter;
 
+import com.bartspreij.splitter.cli.TextUI;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import splitter.userinterface.TextUI;
-
 
 @SpringBootApplication
 public class Main implements CommandLineRunner {

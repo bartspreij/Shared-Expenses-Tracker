@@ -13,7 +13,8 @@ public class Person implements Comparable<Person> {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @ManyToMany(mappedBy = "people")
+
+    @ManyToMany(mappedBy = "people", cascade = {CascadeType.MERGE})
     private List<GroupOfPeople> groups;
 
     @Column(unique = true)

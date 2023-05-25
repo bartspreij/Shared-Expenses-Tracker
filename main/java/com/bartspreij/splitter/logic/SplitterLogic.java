@@ -39,10 +39,9 @@ public class SplitterLogic {
     }
 
     public GroupOfPeople getGroup(String groupName) {
-        if (groupRepository.existsByName(groupName)) {
-            return groupRepository.findByName(groupName);
-        }
-        return null;
+        Optional<GroupOfPeople> fetchedGroup = groupRepository.findByName(groupName);
+
+        return fetchedGroup.orElseGet(GroupOfPeople::new);
     }
 
     public UsageOption getUsageOption(String input) {
@@ -132,9 +131,9 @@ public class SplitterLogic {
     }
 
     public List<Person> fetchOrAddParticipants(String participants) {
-        GroupOfPeople participantsGroup = extractTemporaryGroupFromInput(participants);
+        List<Person> participantsGroup = extractTemporaryGroupFromInput(participants);
         List<Person> participantsList = new ArrayList<>();
-        for (Person p : participantsGroup.getPeople()) { // check db for person if not there add
+        for (Person p : participantsGroup) { // check db for person if not there add
             Person person = fetchOrAddPerson(p.getName());
             participantsList.add(person);
         }
@@ -243,68 +242,79 @@ public class SplitterLogic {
     }
 
     public void createGroup(String groupName, String listOfPeopleAndGroups) {
-        GroupOfPeople createdGroup = extractTemporaryGroupFromInput(listOfPeopleAndGroups);
-        createdGroup.setName(groupName);
-        personRepository.saveAll(createdGroup.getPeople());
-        groupRepository.saveOrUpdate(createdGroup);
+
+        if (!groupRepository.existsByName(groupName)) {
+            List<Person> groupList = fetchOrAddParticipants(listOfPeopleAndGroups);
+            GroupOfPeople newGroup = new GroupOfPeople();
+            newGroup.setName(groupName);
+            newGroup.setPeople(groupList);
+
+            for (Person p : groupList) {
+                if (!personRepository.existsByName(p.getName())) {
+                    personRepository.save(p);
+                }
+            }
+            groupRepository.save(newGroup);
+        } else {
+            addToGroup(groupName, listOfPeopleAndGroups);
+        }
     }
 
     public void addToGroup(String groupNameToAddTo, String peopleToAdd) {
+        List<Person> groupToAdd = fetchOrAddParticipants(peopleToAdd);
         GroupOfPeople groupToAddTo = getGroup(groupNameToAddTo);
-        GroupOfPeople groupToAdd = extractTemporaryGroupFromInput(peopleToAdd);
 
-        for (Person person : groupToAdd.getPeople()) {
-            groupToAddTo.add(person);
+        for (Person person : groupToAdd) {
+            if (!personRepository.existsByName(person.getName())) {
+                groupToAddTo.add(person);
+            }
         }
+        groupRepository.save(groupToAddTo);
     }
 
     public void removeGroup(String groupName, String listOfPeopleAndGroups) {
         GroupOfPeople groupToRemoveFrom = getGroup(groupName);
-        GroupOfPeople groupToRemove = extractTemporaryGroupFromInput(listOfPeopleAndGroups);
+        List<Person> groupToRemove = extractTemporaryGroupFromInput(listOfPeopleAndGroups);
         
-        for (Person person : groupToRemove.getPeople()) {
+        for (Person person : groupToRemove) {
             groupToRemoveFrom.remove(person);
         }
     }
 
     public void showGroup(String nameOfGroup) {
-        GroupOfPeople fetchedGroup = groupRepository.findByName(nameOfGroup);
+        GroupOfPeople fetchedGroup = getGroup(nameOfGroup);
 
         if (fetchedGroup != null) {
-            for (Person person : fetchedGroup.getPeople()) {
-                System.out.println(person.getName());
-            }
+            fetchedGroup.printGroup();
         } else {
             System.out.println("Unknown group");
         }
     }
 
-    public void collectAllPeopleExceptPrefixMinus(GroupOfPeople TMP, String listOfPersonsAndOrGroups) {
+    public void collectAllPeopleExceptPrefixMinus(List<Person> TMP, String listOfPersonsAndOrGroups) {
         Matcher matcher = patternMatcher(RegexPatterns.EXTRACT_NAME_OR_GROUP, listOfPersonsAndOrGroups);
 
         while (matcher.find()) {
             String name = matcher.group("name");
             if (isStringUpperCase(name)) { // it's a group
-                GroupOfPeople fetchedGroup = groupRepository.findByName(name);
-                for (Person person : fetchedGroup.getPeople()) {
-                    TMP.add(person);
-                }
+                GroupOfPeople fetchedGroup = getGroup(name);
+                TMP.addAll(fetchedGroup.getPeople());
             } else { // it's a person
                 TMP.add(new Person(name));
             }
         }
     }
 
-    public void removePrefixMinusFromGroup(GroupOfPeople TMP, String toRemove) {
+    public void removePrefixMinusFromGroup(List<Person> TMP, String toRemove) {
         Matcher matcher = patternMatcher(RegexPatterns.NAMES_TO_REMOVE, toRemove);
 
         while (matcher.find()) {
-            TMP.getPeople().removeIf(person -> person.getName().equals(matcher.group("nameToRemove")));
+            TMP.removeIf(person -> person.getName().equals(matcher.group("nameToRemove")));
         }
         matcher.reset();
         while (matcher.find()) {
             if (isStringUpperCase(matcher.group("nameToRemove"))) { // it's a group
-                GroupOfPeople group = groupRepository.findByName(matcher.group("nameToRemove"));
+                GroupOfPeople group = getGroup(matcher.group("nameToRemove"));
                 for (Person person : group.getPeople()) {
                     TMP.remove(person);
                 }
@@ -312,8 +322,8 @@ public class SplitterLogic {
         }
     }
 
-    public GroupOfPeople extractTemporaryGroupFromInput(String listOfPeopleAndGroups) {
-        GroupOfPeople TMP = new GroupOfPeople("TMP");
+    public List<Person> extractTemporaryGroupFromInput(String listOfPeopleAndGroups) {
+        List<Person> TMP = new ArrayList<>();
         collectAllPeopleExceptPrefixMinus(TMP, listOfPeopleAndGroups);
         removePrefixMinusFromGroup(TMP, listOfPeopleAndGroups);
 
@@ -400,7 +410,7 @@ public class SplitterLogic {
     @Transactional
     public void secretSanta(String input) {
         String groupName = input.split(" ")[1];
-        List<Person> peopleRandomized = groupRepository.findByName(groupName).getPeople();
+        List<Person> peopleRandomized = getGroup(groupName).getPeople();
         List<Person> peopleSorted = new ArrayList<>(peopleRandomized);
         Collections.sort(peopleSorted);
         Random random = new Random();

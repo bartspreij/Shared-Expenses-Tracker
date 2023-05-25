@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class Main implements CommandLineRunner {
@@ -16,8 +17,8 @@ public class Main implements CommandLineRunner {
     }
 
     public static void main(String[] args) {
-        SpringApplication.run(Main.class, args);
-        System.exit(0);
+        ConfigurableApplicationContext ctx = SpringApplication.run(Main.class, args);
+        ctx.close();
     }
 
     @Override

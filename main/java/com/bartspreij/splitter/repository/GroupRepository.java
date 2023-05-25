@@ -1,15 +1,15 @@
 package com.bartspreij.splitter.repository;
 
+import com.bartspreij.splitter.model.GroupOfPeople;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-import com.bartspreij.splitter.model.GroupOfPeople;
 
 import java.util.Optional;
 
 @Repository
 public interface GroupRepository extends CrudRepository<GroupOfPeople, Long> {
     boolean existsByName(String groupName);
-    GroupOfPeople findByName(String groupName);
+    Optional<GroupOfPeople> findByName(String groupName);
 
     default void saveOrUpdate(GroupOfPeople group) {
         Optional<GroupOfPeople> fetchedGroup = findById(group.getId());

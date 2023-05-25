@@ -13,7 +13,7 @@ public class GroupOfPeople {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @ManyToMany
+    @ManyToMany(cascade = {CascadeType.MERGE}, fetch = FetchType.EAGER)
     @JoinTable(
             name = "GROUP_PERSON",
             joinColumns = @JoinColumn(name = "group_id"),

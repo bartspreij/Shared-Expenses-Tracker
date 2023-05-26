@@ -7,10 +7,12 @@ import java.util.Scanner;
 public class TextUI {
     private final Scanner scanner;
     private final SplitterLogic logic;
+    public boolean running;
 
     public TextUI(Scanner scanner, SplitterLogic logic) {
         this.logic = logic;
         this.scanner = scanner;
+        this.running = true;
     }
 
     public void start() {
@@ -35,13 +37,12 @@ public class TextUI {
                 case BALANCE -> logic.printBalance(input);
                 case GROUP -> logic.validateGroupInput(input);
                 case PURCHASE -> logic.purchaseExtractInfo(input);
-                case SECRET_SANTA -> logic.secretSanta(input);
+                case SECRET_SANTA -> logic.secretSanta(input.split(" ")[1]);
                 case CASH_BACK -> logic.cashBackExtractInfo(input);
                 case WRITE_OFF -> logic.writeOff(input);
                 case EXIT -> {
                     return;
                 }
-
                 default -> System.out.println("Unknown command. Print help to show commands list");
             }
         }

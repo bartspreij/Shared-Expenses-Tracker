@@ -1,21 +1,20 @@
 package com.splitter.entities;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
 import java.time.LocalDate;
 
-@NoArgsConstructor
-@Data
 @Entity
 @Table(name = "TRANSACTIONS")
 public class Transaction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long transactionId;
+    @Column(name = "transaction_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
 
+    @DateTimeFormat
     @Column(columnDefinition = "DATE")
     private LocalDate date;
 
@@ -24,20 +23,14 @@ public class Transaction {
     private String type;
     private double amount;
 
+    public Transaction() {}
+
     public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
         this.date = date;
         this.type = type;
         this.peoplePair = peoplePair;
         this.reversePair = reversePair;
         this.amount = amount;
-    }
-
-    public LocalDate getDate() {
-        return date;
-    }
-
-    public String getType() {
-        return type;
     }
 
     public String getPeoplePair() {
@@ -52,8 +45,7 @@ public class Transaction {
         return amount;
     }
 
-    @Override
-    public String toString() {
-        return date.toString() + " " + type + " " + peoplePair + " " + amount;
+    public String getType() {
+        return type;
     }
 }

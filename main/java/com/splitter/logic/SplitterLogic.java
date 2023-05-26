@@ -5,9 +5,9 @@ import com.splitter.cli.UsageOption;
 import com.splitter.entities.GroupOfPeople;
 import com.splitter.entities.Person;
 import com.splitter.entities.Transaction;
-import com.splitter.repositories.GroupRepository;
-import com.splitter.repositories.PersonRepository;
-import com.splitter.repositories.TransactionRepository;
+import com.splitter.service.GroupService;
+import com.splitter.service.PersonService;
+import com.splitter.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.transaction.Transactional;
@@ -19,29 +19,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SplitterLogic {
-    private final TransactionRepository transactionRepository;
-    private final GroupRepository groupRepository;
-    private final PersonRepository personRepository;
+    private final TransactionService transactionService;
+    private final GroupService groupService;
+    private final PersonService personService;
 
     @Autowired
-    public SplitterLogic(TransactionRepository transactionRepository, GroupRepository groupRepository, PersonRepository personRepository) {
-        this.transactionRepository = transactionRepository;
-        this.groupRepository = groupRepository;
-        this.personRepository = personRepository;
+    public SplitterLogic(TransactionService transactionService,
+                         GroupService groupService,
+                         PersonService personService) {
+        this.transactionService = transactionService;
+        this.groupService = groupService;
+        this.personService = personService;
     }
 
     public void addTransaction(LocalDate date, String type, Person borrower, Person lender, double amount) {
         String peoplePair = borrower.getName() + " " + lender.getName();
         String reversePair = lender.getName() + " " + borrower.getName();
 
-        Transaction transaction = new Transaction(date, type, peoplePair, reversePair, amount);
-        transactionRepository.save(transaction);
-    }
-
-    public GroupOfPeople getGroup(String groupName) {
-        Optional<GroupOfPeople> fetchedGroup = groupRepository.findByName(groupName);
-
-        return fetchedGroup.orElseGet(GroupOfPeople::new);
+        transactionService.addTransaction(new Transaction(date, type, peoplePair, reversePair, amount));
     }
 
     public UsageOption getUsageOption(String input) {
@@ -111,30 +106,21 @@ public class SplitterLogic {
 
         if (matcher.find()) {
             String type = matcher.group("type");
-            Person borrower = fetchOrAddPerson(matcher.group("borrower"));
-            Person lender = fetchOrAddPerson(matcher.group("lender"));
+            Person borrower = personService.getOrAdd(matcher.group("borrower"));
+            Person lender = personService.getOrAdd(matcher.group("lender"));
             double amount = Double.parseDouble(matcher.group("amount"));
             addTransaction(date, type, borrower, lender, amount);
+
         } else {
             System.out.println("Illegal command arguments");
         }
-    }
-
-    public Person fetchOrAddPerson(String name) {
-        Person person = personRepository.findByName(name);
-
-        if (person == null) {
-            person = new Person(name);
-            personRepository.save(person);
-        }
-        return person;
     }
 
     public List<Person> fetchOrAddParticipants(String participants) {
         List<Person> participantsGroup = extractTemporaryGroupFromInput(participants);
         List<Person> participantsList = new ArrayList<>();
         for (Person p : participantsGroup) { // check db for person if not there add
-            Person person = fetchOrAddPerson(p.getName());
+            Person person = personService.getOrAdd(p.getName());
             participantsList.add(person);
         }
         return participantsList;
@@ -144,21 +130,19 @@ public class SplitterLogic {
         LocalDate date = dateIncludedOrNot(input);
         HashMap<String, Double> pairBalanceCalculatedWithDate = new HashMap<>();
         String status = input.contains("open") ? "open" : "close";
-        List<Transaction> allTransactions = (List<Transaction>) transactionRepository.findAll();
+        List<Transaction> setTransactions;
 
         switch (status) {
             case "open" -> {
-                for (Transaction transaction : allTransactions) {
-                    if (transaction.getDate().isBefore(date.withDayOfMonth(1))) {
-                        updatePairBalance(transaction, pairBalanceCalculatedWithDate);
-                    }
+                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date.withDayOfMonth(1));
+                for (Transaction transaction : setTransactions) {
+                    updatePairBalance(transaction, pairBalanceCalculatedWithDate);
                 }
             }
             case "close" -> {
-                for (Transaction transaction : allTransactions) {
-                    if (!transaction.getDate().isAfter(date)) {
-                        updatePairBalance(transaction, pairBalanceCalculatedWithDate);
-                    }
+                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date);
+                for (Transaction transaction : setTransactions) {
+                    updatePairBalance(transaction, pairBalanceCalculatedWithDate);
                 }
             }
         }
@@ -223,71 +207,50 @@ public class SplitterLogic {
 
         while (matcher.find()) {
             String groupName = matcher.group("groupName");
-            String personsAndOrGroups = matcher.group("personsAndOrGroups");
+            List<Person> listOfPeople = new ArrayList<>();
+            if (!option.equals(GroupOption.SHOW)) {
+                 listOfPeople = extractTemporaryGroupFromInput(matcher.group("personsAndOrGroups"));
+            }
 
             switch (option) {
-                case ADD -> addToGroup(groupName, personsAndOrGroups);
+                case ADD -> addToGroup(groupName, listOfPeople);
                 case SHOW -> showGroup(matcher.group(1));
                 case CREATE -> {
                     if (!isStringUpperCase(groupName)) { // invalid group name
                         System.out.println("Illegal command arguments");
                         break;
                     }
-                    createGroup(groupName, personsAndOrGroups);
+                    createGroup(groupName, listOfPeople);
                 }
-                case REMOVE -> removeGroup(groupName, personsAndOrGroups);
+                case REMOVE -> removeGroup(groupName, listOfPeople);
                 default -> System.out.println("Illegal command arguments");
             }
         }
     }
 
-    public void createGroup(String groupName, String listOfPeopleAndGroups) {
+    public void createGroup(String groupName, List<Person> listOfPeople) {
 
-        if (!groupRepository.existsByName(groupName)) {
-            List<Person> groupList = fetchOrAddParticipants(listOfPeopleAndGroups);
-            GroupOfPeople newGroup = new GroupOfPeople();
-            newGroup.setName(groupName);
-            newGroup.setPeople(groupList);
-
-            for (Person p : groupList) {
-                if (!personRepository.existsByName(p.getName())) {
-                    personRepository.save(p);
-                }
-            }
-            groupRepository.save(newGroup);
+        if (groupService.exists(groupName)) {
+            groupService.addMembers(groupName, listOfPeople);
         } else {
-            addToGroup(groupName, listOfPeopleAndGroups);
+            groupService.createNewGroup(groupName, listOfPeople);
         }
     }
 
-    public void addToGroup(String groupNameToAddTo, String peopleToAdd) {
-        List<Person> groupToAdd = fetchOrAddParticipants(peopleToAdd);
-        GroupOfPeople groupToAddTo = getGroup(groupNameToAddTo);
-
-        for (Person person : groupToAdd) {
-            if (!personRepository.existsByName(person.getName())) {
-                groupToAddTo.add(person);
-            }
-        }
-        groupRepository.save(groupToAddTo);
+    public void addToGroup(String groupName, List<Person> listOfPeople) {
+        groupService.addMembers(groupName, listOfPeople);
     }
 
-    public void removeGroup(String groupName, String listOfPeopleAndGroups) {
-        GroupOfPeople groupToRemoveFrom = getGroup(groupName);
-        List<Person> groupToRemove = extractTemporaryGroupFromInput(listOfPeopleAndGroups);
-        
-        for (Person person : groupToRemove) {
-            groupToRemoveFrom.remove(person);
-        }
+    public void removeGroup(String groupName, List<Person> listOfPeople) {
+        groupService.removeMembers(groupName, listOfPeople);
     }
 
     public void showGroup(String nameOfGroup) {
-        GroupOfPeople fetchedGroup = getGroup(nameOfGroup);
 
-        if (fetchedGroup != null) {
-            fetchedGroup.printGroup();
-        } else {
+        if (!groupService.exists(nameOfGroup)) {
             System.out.println("Unknown group");
+        } else {
+            System.out.println(groupService.showMembers(nameOfGroup));
         }
     }
 
@@ -297,7 +260,7 @@ public class SplitterLogic {
         while (matcher.find()) {
             String name = matcher.group("name");
             if (isStringUpperCase(name)) { // it's a group
-                GroupOfPeople fetchedGroup = getGroup(name);
+                GroupOfPeople fetchedGroup = groupService.getGroup(name);
                 TMP.addAll(fetchedGroup.getPeople());
             } else { // it's a person
                 TMP.add(new Person(name));
@@ -314,20 +277,25 @@ public class SplitterLogic {
         matcher.reset();
         while (matcher.find()) {
             if (isStringUpperCase(matcher.group("nameToRemove"))) { // it's a group
-                GroupOfPeople group = getGroup(matcher.group("nameToRemove"));
-                for (Person person : group.getPeople()) {
-                    TMP.remove(person);
-                }
+                GroupOfPeople group = groupService.getGroup(matcher.group("nameToRemove"));
+                TMP.addAll(group.getPeople());
             }
         }
     }
 
+    @Transactional
     public List<Person> extractTemporaryGroupFromInput(String listOfPeopleAndGroups) {
         List<Person> TMP = new ArrayList<>();
+
         collectAllPeopleExceptPrefixMinus(TMP, listOfPeopleAndGroups);
         removePrefixMinusFromGroup(TMP, listOfPeopleAndGroups);
 
-        return TMP;
+        List<Person> result = new ArrayList<>();
+        for (Person p : TMP) {
+            result.add(personService.getOrAdd(p.getName()));
+        }
+
+        return result;
     }
 
     public boolean isStringUpperCase(String str) {
@@ -346,7 +314,7 @@ public class SplitterLogic {
         Matcher matcher = patternMatcher(isCashBack ? RegexPatterns.CASHBACK_EXTRACT_INFO : RegexPatterns.PURCHASE_EXTRACT_INFO, input);
 
         if (matcher.find()) {
-            Person payer = fetchOrAddPerson(matcher.group(1));
+            Person payer = personService.getOrAdd(matcher.group(1));
             String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
             List<Person> participants = fetchOrAddParticipants(matcher.group(4));
@@ -407,26 +375,29 @@ public class SplitterLogic {
         return pattern.matcher(input);
     }
 
-    @Transactional
-    public void secretSanta(String input) {
-        String groupName = input.split(" ")[1];
-        List<Person> peopleRandomized = getGroup(groupName).getPeople();
-        List<Person> peopleSorted = new ArrayList<>(peopleRandomized);
-        Random random = new Random();
-        Collections.shuffle(peopleRandomized, random);
 
-        for (Person giver : peopleSorted) {
-            for (Person receiver  : peopleRandomized) {
+    public void secretSanta(String groupName) {
+        if (groupService.getGroup(groupName) == null) {
+            System.out.println("Unknown group");
+        } else {
+            List<String> sortedPeople = groupService.getMembers(groupName);
+            List<String> randomPeople = new ArrayList<>(sortedPeople);
+            Collections.shuffle(randomPeople, new Random());
 
-                if (!giver.equals(receiver) &&
-                        (receiver.getSecretSantaRecipient() == null || !receiver.getSecretSantaRecipient().equals(giver))) {
+            for (String giver : sortedPeople) {
+                for (String receiver  : randomPeople) {
 
-                    System.out.printf("%s gift to %s\n", giver, receiver);
-                    giver.setSecretSantaRecipient(receiver);
-                    peopleRandomized.remove(receiver);
-                    break;
+                    if (!giver.equals(receiver) &&
+                            (personService.getOrAdd(receiver).getSecretSantaRecipient() == null || !personService.getOrAdd(receiver).getSecretSantaRecipient().equals(personService.getOrAdd(giver)))) {
+
+                        System.out.printf("%s gift to %s\n", giver, receiver);
+                        personService.getOrAdd(giver).setSecretSantaRecipient(personService.getOrAdd(receiver));
+                        randomPeople.remove(receiver);
+                        break;
+                    }
                 }
             }
+
         }
     }
 
@@ -436,17 +407,18 @@ public class SplitterLogic {
         String openOrClose = input.contains("open") ? "open" : "close";
 
         switch (openOrClose) {
-            case "open" -> transactionRepository.deleteByDateIsLessThan(date.withDayOfMonth(1));
+            case "open" -> transactionService.deleteByDateIsLessThan(date.withDayOfMonth(1));
             case "close" -> {
                 if (date.isEqual(LocalDate.now())) { // date is write off everything before today
-                    transactionRepository.deleteByDateIsLessThanEqual(LocalDate.now());
+                    transactionService.deleteByDateIsLessThanEqual(LocalDate.now());
                     break;
                 }
-                transactionRepository.deleteByDateIsLessThanEqual(date);
+                transactionService.deleteByDateIsLessThanEqual(date);
             }
         }
     }
 }
+
 
 
 

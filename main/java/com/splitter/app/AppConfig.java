@@ -2,9 +2,9 @@ package com.splitter.app;
 
 import com.splitter.cli.TextUI;
 import com.splitter.logic.SplitterLogic;
-import com.splitter.repositories.GroupRepository;
-import com.splitter.repositories.PersonRepository;
-import com.splitter.repositories.TransactionRepository;
+import com.splitter.service.GroupService;
+import com.splitter.service.PersonService;
+import com.splitter.service.TransactionService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,8 +18,8 @@ public class AppConfig {
     }
 
     @Bean
-    public SplitterLogic splitterLogic(TransactionRepository transactionRepository, GroupRepository groupRepository, PersonRepository personRepository) {
-        return new SplitterLogic(transactionRepository, groupRepository, personRepository);
+    public SplitterLogic splitterLogic(TransactionService transactionService, GroupService groupService, PersonService personService) {
+        return new SplitterLogic(transactionService, groupService, personService);
     }
 
     @Bean

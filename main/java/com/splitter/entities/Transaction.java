@@ -3,6 +3,7 @@ package com.splitter.entities;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -21,11 +22,11 @@ public class Transaction {
     private String peoplePair;
     private String reversePair;
     private String type;
-    private double amount;
+    private BigDecimal amount;
 
     public Transaction() {}
 
-    public Transaction(LocalDate date, String type, String peoplePair, String reversePair, double amount) {
+    public Transaction(LocalDate date, String type, String peoplePair, String reversePair, BigDecimal amount) {
         this.date = date;
         this.type = type;
         this.peoplePair = peoplePair;
@@ -41,7 +42,7 @@ public class Transaction {
         return reversePair;
     }
 
-    public double getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 

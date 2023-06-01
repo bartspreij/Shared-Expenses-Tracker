@@ -1,13 +1,11 @@
-package com.splitter.logic;
+package com.splitter.service;
 
 import com.splitter.cli.GroupOption;
+import com.splitter.cli.RegexPatterns;
 import com.splitter.cli.UsageOption;
 import com.splitter.entities.GroupOfPeople;
 import com.splitter.entities.Person;
 import com.splitter.entities.Transaction;
-import com.splitter.service.GroupService;
-import com.splitter.service.PersonService;
-import com.splitter.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.transaction.Transactional;
@@ -18,13 +16,13 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SplitterLogic {
+public class SplitterService {
     private final TransactionService transactionService;
     private final GroupService groupService;
     private final PersonService personService;
 
     @Autowired
-    public SplitterLogic(TransactionService transactionService,
+    public SplitterService(TransactionService transactionService,
                          GroupService groupService,
                          PersonService personService) {
         this.transactionService = transactionService;
@@ -32,7 +30,7 @@ public class SplitterLogic {
         this.personService = personService;
     }
 
-    public void addTransaction(LocalDate date, String type, Person borrower, Person lender, double amount) {
+    public void addTransaction(LocalDate date, String type, Person borrower, Person lender, BigDecimal amount) {
         String peoplePair = borrower.getName() + " " + lender.getName();
         String reversePair = lender.getName() + " " + borrower.getName();
 
@@ -65,7 +63,7 @@ public class SplitterLogic {
         return GroupOption.INVALID;
     }
 
-    public void updatePairBalance(Transaction t, HashMap<String, Double> pairBalancesToCalculate) {
+    public void updatePairBalance(Transaction t, HashMap<String, BigDecimal> pairBalancesToCalculate) {
         String key = "No key";
 
         if (pairBalancesToCalculate.containsKey(t.getPeoplePair())) {
@@ -77,16 +75,16 @@ public class SplitterLogic {
         switch (key) {
             case "keyIsPeoplePair" -> {
                 if (t.getType().equals("borrow")) {
-                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount(), Double::sum);
+                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount(), BigDecimal::add);
                 } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.merge(t.getPeoplePair(), -t.getAmount(), Double::sum);
+                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount().negate(), BigDecimal::add);
                 }
             }
             case "keyIsReversePair" -> {
                 if (t.getType().equals("borrow")) {
-                    pairBalancesToCalculate.merge(t.getReversePair(), -t.getAmount(), Double::sum);
+                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount().negate(), BigDecimal::add);
                 } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount(), Double::sum);
+                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount(), BigDecimal::add);
                 }
             }
 
@@ -94,7 +92,7 @@ public class SplitterLogic {
                 if (t.getType().equals("borrow")) {
                     pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount());
                 } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), -t.getAmount());
+                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount().negate());
                 }
             }
         }
@@ -108,7 +106,7 @@ public class SplitterLogic {
             String type = matcher.group("type");
             Person borrower = personService.getOrAdd(matcher.group("borrower"));
             Person lender = personService.getOrAdd(matcher.group("lender"));
-            double amount = Double.parseDouble(matcher.group("amount"));
+            BigDecimal amount = new BigDecimal(matcher.group("amount"));
             addTransaction(date, type, borrower, lender, amount);
 
         } else {
@@ -116,25 +114,15 @@ public class SplitterLogic {
         }
     }
 
-    public List<Person> fetchOrAddParticipants(String participants) {
-        List<Person> participantsGroup = extractTemporaryGroupFromInput(participants);
-        List<Person> participantsList = new ArrayList<>();
-        for (Person p : participantsGroup) { // check db for person if not there add
-            Person person = personService.getOrAdd(p.getName());
-            participantsList.add(person);
-        }
-        return participantsList;
-    }
-
-    public Map<String, Double> getBalance(String input) {
+    public Map<String, BigDecimal> getBalance(String input) {
         LocalDate date = dateIncludedOrNot(input);
-        HashMap<String, Double> pairBalanceCalculatedWithDate = new HashMap<>();
+        HashMap<String, BigDecimal> pairBalanceCalculatedWithDate = new HashMap<>();
         String status = input.contains("open") ? "open" : "close";
         List<Transaction> setTransactions;
 
         switch (status) {
             case "open" -> {
-                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date.withDayOfMonth(1));
+                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date.withDayOfMonth(1).minusDays(1));
                 for (Transaction transaction : setTransactions) {
                     updatePairBalance(transaction, pairBalanceCalculatedWithDate);
                 }
@@ -150,14 +138,14 @@ public class SplitterLogic {
     }
 
     public void printBalance(String input) {
-        Map<String, Double> sortedMap = getBalance(input);
+        Map<String, BigDecimal> sortedMap = getBalance(input);
 
         boolean anyRepayments = false;
         String[] names;
 
         for (String key : sortedMap.keySet()) {
-            double value = sortedMap.get(key);
-            if (value > 0.01) {
+            BigDecimal value = sortedMap.get(key);
+            if (value.compareTo(BigDecimal.valueOf(0.01)) >= 0) { // if value is equal or more than 0.01
                 names = key.split(" ");
                 System.out.printf("%s owes %s %.2f\n", names[0], names[1], value);
                 anyRepayments = true;
@@ -178,14 +166,14 @@ public class SplitterLogic {
         }
     }
 
-    public Map<String, Double> swapAndSortMap(HashMap<String, Double> balancesMap) {
-        Map<String, Double> sortedMap = new TreeMap<>();
+    public Map<String, BigDecimal> swapAndSortMap(HashMap<String, BigDecimal> balancesMap) {
+        Map<String, BigDecimal> sortedMap = new TreeMap<>();
 
-        for (Map.Entry<String, Double> entry : balancesMap.entrySet()) {
+        for (Map.Entry<String, BigDecimal> entry : balancesMap.entrySet()) {
             String key = entry.getKey();
-            double value = entry.getValue();
+            BigDecimal value = entry.getValue();
 
-            if (value < 0) {
+            if (value.compareTo(BigDecimal.ZERO) < 0) {
                 String[] names = key.split(" ");
                 if (names.length == 2) {
                     String name1 = names[0];
@@ -193,8 +181,8 @@ public class SplitterLogic {
                     key = name2 + " " + name1;
                 }
             }
-            value = Math.abs(value);
-            sortedMap.put(key, value);
+
+            sortedMap.put(key, value.abs());
         }
         return sortedMap;
     }
@@ -209,7 +197,11 @@ public class SplitterLogic {
             String groupName = matcher.group("groupName");
             List<Person> listOfPeople = new ArrayList<>();
             if (!option.equals(GroupOption.SHOW)) {
-                 listOfPeople = extractTemporaryGroupFromInput(matcher.group("personsAndOrGroups"));
+                if (matcher.group("personsAndOrGroups") == null) {
+                    System.out.println("Illegal command arguments");
+                    break;
+                }
+                 listOfPeople = fetchParticipants(matcher.group("personsAndOrGroups"));
             }
 
             switch (option) {
@@ -220,20 +212,11 @@ public class SplitterLogic {
                         System.out.println("Illegal command arguments");
                         break;
                     }
-                    createGroup(groupName, listOfPeople);
+                    groupService.createNewGroup(groupName, listOfPeople);
                 }
                 case REMOVE -> removeGroup(groupName, listOfPeople);
                 default -> System.out.println("Illegal command arguments");
             }
-        }
-    }
-
-    public void createGroup(String groupName, List<Person> listOfPeople) {
-
-        if (groupService.exists(groupName)) {
-            groupService.addMembers(groupName, listOfPeople);
-        } else {
-            groupService.createNewGroup(groupName, listOfPeople);
         }
     }
 
@@ -246,9 +229,10 @@ public class SplitterLogic {
     }
 
     public void showGroup(String nameOfGroup) {
-
         if (!groupService.exists(nameOfGroup)) {
             System.out.println("Unknown group");
+        } else if (groupService.getMembers(nameOfGroup).isEmpty()) {
+            System.out.println("Group is empty");
         } else {
             System.out.println(groupService.showMembers(nameOfGroup));
         }
@@ -261,9 +245,11 @@ public class SplitterLogic {
             String name = matcher.group("name");
             if (isStringUpperCase(name)) { // it's a group
                 GroupOfPeople fetchedGroup = groupService.getGroup(name);
-                TMP.addAll(fetchedGroup.getPeople());
+                for (Person p : fetchedGroup.getPeople()) {
+                    TMP.add(personService.getOrAdd(p.getName()));
+                }
             } else { // it's a person
-                TMP.add(new Person(name));
+                TMP.add(personService.getOrAdd(name));
             }
         }
     }
@@ -278,24 +264,20 @@ public class SplitterLogic {
         while (matcher.find()) {
             if (isStringUpperCase(matcher.group("nameToRemove"))) { // it's a group
                 GroupOfPeople group = groupService.getGroup(matcher.group("nameToRemove"));
-                TMP.addAll(group.getPeople());
+                for (Person person : group.getPeople()) {
+                    TMP.removeIf(p -> p.getName().equals(person.getName()));
+                }
             }
         }
     }
 
-    @Transactional
-    public List<Person> extractTemporaryGroupFromInput(String listOfPeopleAndGroups) {
-        List<Person> TMP = new ArrayList<>();
 
+    @Transactional
+    public List<Person> fetchParticipants(String listOfPeopleAndGroups) {
+        List<Person> TMP = new ArrayList<>();
         collectAllPeopleExceptPrefixMinus(TMP, listOfPeopleAndGroups);
         removePrefixMinusFromGroup(TMP, listOfPeopleAndGroups);
-
-        List<Person> result = new ArrayList<>();
-        for (Person p : TMP) {
-            result.add(personService.getOrAdd(p.getName()));
-        }
-
-        return result;
+        return TMP;
     }
 
     public boolean isStringUpperCase(String str) {
@@ -317,24 +299,20 @@ public class SplitterLogic {
             Person payer = personService.getOrAdd(matcher.group(1));
             String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
-            List<Person> participants = fetchOrAddParticipants(matcher.group(4));
-            double adjustedAmount = isCashBack ? -amount : amount;
-            purchase(date, payer, product, adjustedAmount, participants);
+            List<Person> participants = fetchParticipants(matcher.group(4));
+            BigDecimal adjustedAmount = BigDecimal.valueOf(isCashBack ? -amount : amount);
+            purchase(date, payer, adjustedAmount, participants);
         }
     }
 
     @Transactional
-    public void purchaseExtractInfo(String input) {
-        extractInfo(input, false);
-    }
+    public void purchaseExtractInfo(String input) { extractInfo(input, false); }
 
     @Transactional
-    public void cashBackExtractInfo(String input) {
-        extractInfo(input, true);
-    }
+    public void cashBackExtractInfo(String input) { extractInfo(input, true); }
 
     @Transactional
-    public void purchase(LocalDate date, Person payer, String product, double amount, List<Person> participantsList) {
+    public void purchase(LocalDate date, Person payer, BigDecimal amount, List<Person> participantsList) {
         //TODO: refactor, use actual BigDecimal
         if (participantsList.size() == 0) {
             System.out.println("Group is empty");
@@ -342,30 +320,30 @@ public class SplitterLogic {
         }
 
         // Constants
-        final double CENT = 0.01;
+        BigDecimal CENT = BigDecimal.valueOf(0.01);
         final int DECIMAL_PLACES = 2;
 
-        // Turn values into BigDecimal
-        BigDecimal amountDB = BigDecimal.valueOf(amount);
+
         BigDecimal sizeOfGroup = BigDecimal.valueOf(participantsList.size());
 
         // Calculate amount per person and remainder
-        BigDecimal amountPerPerson = amountDB.divide(sizeOfGroup, DECIMAL_PLACES, RoundingMode.DOWN);
-        BigDecimal remainderBD = amountDB.subtract(amountPerPerson.multiply(sizeOfGroup));
+        BigDecimal amountPerPerson = amount.divide(sizeOfGroup, DECIMAL_PLACES, RoundingMode.DOWN);
+        BigDecimal remainderBD = amount.subtract(amountPerPerson.multiply(sizeOfGroup));
 
         // back to double
-        amount = amountPerPerson.doubleValue();
 
+
+        Collections.sort(participantsList);
         for (Person person : participantsList) {
             if (person.equals(payer)) {
-                remainderBD = remainderBD.subtract(BigDecimal.valueOf(CENT)); // remainder left or not remove cent
+                remainderBD = remainderBD.subtract(CENT); // remainder left or not remove cent
                 continue;
             }
             if (remainderBD.compareTo(BigDecimal.ZERO) > 0) { // while there is remainder left
-                addTransaction(date, "borrow", person, payer, amount + CENT);
-                remainderBD = remainderBD.subtract(BigDecimal.valueOf(CENT)); // we remove the cent
+                addTransaction(date, "borrow", person, payer, amountPerPerson.add(CENT));
+                remainderBD = remainderBD.subtract(CENT); // we remove the cent
             } else {
-                addTransaction(date, "borrow", person, payer, amount);
+                addTransaction(date, "borrow", person, payer, amountPerPerson);
             }
         }
     }

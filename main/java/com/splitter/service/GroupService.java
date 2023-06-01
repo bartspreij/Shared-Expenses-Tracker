@@ -42,8 +42,10 @@ public class GroupService {
 
     @Transactional
     public void createNewGroup(String groupName, List<Person> members) {
-        var group = repository.getByName(groupName);
-        if (group != null) deleteGroup(group);
+        GroupOfPeople group = repository.getByName(groupName);
+        if (group != null) {
+            deleteGroup(group);
+        }
         repository.save(new GroupOfPeople(groupName, members));
     }
 

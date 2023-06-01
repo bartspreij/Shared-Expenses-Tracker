@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="ef6cf82e-a160-4656-83ad-ad0bb9c9f67e" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main/java/com/splitter/entities/Group.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main/java/com/splitter/logic/Splitter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main/java/com/splitter/service/SplitterService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/app/AppConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/cli/GroupOption.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/cli/TextUI.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/cli/UsageOption.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/entities/GroupOfPeople.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/entities/Person.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/entities/Person.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/entities/Transaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/entities/Transaction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/logic/RegexPatterns.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/logic/SplitterLogic.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/repository/GroupRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/repository/GroupRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/repository/PersonRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/repository/PersonRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/repository/TransactionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/repository/TransactionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/service/GroupService.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/service/GroupService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/service/PersonService.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/service/PersonService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/java/com/splitter/service/TransactionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/main/java/com/splitter/service/TransactionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/resources/application.properties" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DarkyenusTimeTracker">
+    <option name="gitIntegration" value="true" />
+    <option name="naggedAbout" value="1" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="2QZA9QggVBhujbMY9H062DlMtrd" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ef6cf82e-a160-4656-83ad-ad0bb9c9f67e" name="Changes" comment="" />
+      <created>1685550577351</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1685550577351</updated>
+    </task>
+    <servers />
+  </component>
+</project>

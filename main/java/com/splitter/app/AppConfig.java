@@ -1,7 +1,7 @@
 package com.splitter.app;
 
 import com.splitter.cli.TextUI;
-import com.splitter.logic.SplitterLogic;
+import com.splitter.service.SplitterService;
 import com.splitter.service.GroupService;
 import com.splitter.service.PersonService;
 import com.splitter.service.TransactionService;
@@ -18,12 +18,12 @@ public class AppConfig {
     }
 
     @Bean
-    public SplitterLogic splitterLogic(TransactionService transactionService, GroupService groupService, PersonService personService) {
-        return new SplitterLogic(transactionService, groupService, personService);
+    public SplitterService splitterLogic(TransactionService transactionService, GroupService groupService, PersonService personService) {
+        return new SplitterService(transactionService, groupService, personService);
     }
 
     @Bean
-    public TextUI textUI(Scanner scanner, SplitterLogic splitterLogic) {
+    public TextUI textUI(Scanner scanner, SplitterService splitterLogic) {
         return new TextUI(scanner, splitterLogic);
     }
 }

@@ -1,15 +1,15 @@
 package com.splitter.cli;
 
-import com.splitter.logic.SplitterLogic;
+import com.splitter.service.SplitterService;
 
 import java.util.Scanner;
 
 public class TextUI {
     private final Scanner scanner;
-    private final SplitterLogic logic;
+    private final SplitterService logic;
     public boolean running;
 
-    public TextUI(Scanner scanner, SplitterLogic logic) {
+    public TextUI(Scanner scanner, SplitterService logic) {
         this.logic = logic;
         this.scanner = scanner;
         this.running = true;
@@ -37,7 +37,7 @@ public class TextUI {
                 case BALANCE -> logic.printBalance(input);
                 case GROUP -> logic.validateGroupInput(input);
                 case PURCHASE -> logic.purchaseExtractInfo(input);
-                case SECRET_SANTA -> logic.secretSanta(input.split(" ")[1]);
+                case SECRET_SANTA -> logic.secretSanta(input.split("\\s")[1]);
                 case CASH_BACK -> logic.cashBackExtractInfo(input);
                 case WRITE_OFF -> logic.writeOff(input);
                 case EXIT -> {

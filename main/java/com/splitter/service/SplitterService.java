@@ -16,6 +16,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.util.stream.Collectors.*;
+
 public class SplitterService {
     private final TransactionService transactionService;
     private final GroupService groupService;
@@ -31,10 +33,7 @@ public class SplitterService {
     }
 
     public void addTransaction(LocalDate date, String type, Person borrower, Person lender, BigDecimal amount) {
-        String peoplePair = borrower.getName() + " " + lender.getName();
-        String reversePair = lender.getName() + " " + borrower.getName();
-
-        transactionService.addTransaction(new Transaction(date, type, peoplePair, reversePair, amount));
+        transactionService.addTransaction(new Transaction(date, type, borrower, lender, amount));
     }
 
     public UsageOption getUsageOption(String input) {
@@ -63,42 +62,17 @@ public class SplitterService {
         return GroupOption.INVALID;
     }
 
-    public void updatePairBalance(Transaction t, HashMap<String, BigDecimal> pairBalancesToCalculate) {
-        String key = "No key";
-
-        if (pairBalancesToCalculate.containsKey(t.getPeoplePair())) {
-            key = "keyIsPeoplePair";
-        } else if (pairBalancesToCalculate.containsKey(t.getReversePair())) {
-            key = "keyIsReversePair";
-        }
-
-        switch (key) {
-            case "keyIsPeoplePair" -> {
-                if (t.getType().equals("borrow")) {
-                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount(), BigDecimal::add);
-                } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount().negate(), BigDecimal::add);
-                }
-            }
-            case "keyIsReversePair" -> {
-                if (t.getType().equals("borrow")) {
-                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount().negate(), BigDecimal::add);
-                } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount(), BigDecimal::add);
-                }
-            }
-
-            case "No key" -> {
-                if (t.getType().equals("borrow")) {
-                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount());
-                } else if (t.getType().equals("repay")) {
-                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount().negate());
-                }
-            }
-        }
+    @Transactional
+    public void borrow(String input) {
+        borrowOrRepay(input, false);
     }
 
-    public void borrowOrRepay(String input) {
+    @Transactional
+    public void repay(String input) {
+        borrowOrRepay(input, true);
+    }
+
+    public void borrowOrRepay(String input, boolean isRepay) {
         LocalDate date = dateIncludedOrNot(input);
         Matcher matcher = patternMatcher(RegexPatterns.BORROW_OR_REPAY, input);
 
@@ -107,7 +81,8 @@ public class SplitterService {
             Person borrower = personService.getOrAdd(matcher.group("borrower"));
             Person lender = personService.getOrAdd(matcher.group("lender"));
             BigDecimal amount = new BigDecimal(matcher.group("amount"));
-            addTransaction(date, type, borrower, lender, amount);
+            BigDecimal adjustedAmount = isRepay ? amount.negate() : amount;
+            addTransaction(date, type, borrower, lender, adjustedAmount);
 
         } else {
             System.out.println("Illegal command arguments");
@@ -115,26 +90,24 @@ public class SplitterService {
     }
 
     public Map<String, BigDecimal> getBalance(String input) {
-        LocalDate date = dateIncludedOrNot(input);
-        HashMap<String, BigDecimal> pairBalanceCalculatedWithDate = new HashMap<>();
-        String status = input.contains("open") ? "open" : "close";
-        List<Transaction> setTransactions;
+        String status = input.contains("open") ? "open" : "close"; // default is close
+        LocalDate date = status.equals("close") ? dateIncludedOrNot(input) : dateIncludedOrNot(input).withDayOfMonth(1).minusDays(1);
 
-        switch (status) {
-            case "open" -> {
-                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date.withDayOfMonth(1).minusDays(1));
-                for (Transaction transaction : setTransactions) {
-                    updatePairBalance(transaction, pairBalanceCalculatedWithDate);
-                }
-            }
-            case "close" -> {
-                setTransactions = transactionService.getTransactionsBeforeAGivenDate(date);
-                for (Transaction transaction : setTransactions) {
-                    updatePairBalance(transaction, pairBalanceCalculatedWithDate);
-                }
-            }
+        String personsOrGroups = "";
+        Matcher matcher = patternMatcher(RegexPatterns.BALANCE_EXTRACT_INFO, input);
+        while (matcher.find()) {
+            personsOrGroups = matcher.group("personsAndOrGroups");
         }
-        return swapAndSortMap(pairBalanceCalculatedWithDate);
+
+        List<Person> participants = fetchParticipants(personsOrGroups);
+
+        Map<String, BigDecimal> transactionsByDate = transactionService.getTransactionsBeforeAGivenDate(date).stream()
+                .collect(
+                        groupingBy(
+                                t -> String.format("%s %s", t.getBorrower().getName(), t.getLender().getName()),
+                                mapping(Transaction::getAmount, reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+        return swapAndSortMap(transactionsByDate);
     }
 
     public void printBalance(String input) {
@@ -151,7 +124,6 @@ public class SplitterService {
                 anyRepayments = true;
             }
         }
-
         if (!anyRepayments) {
             System.out.println("No repayments");
         }
@@ -166,7 +138,7 @@ public class SplitterService {
         }
     }
 
-    public Map<String, BigDecimal> swapAndSortMap(HashMap<String, BigDecimal> balancesMap) {
+    public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {
         Map<String, BigDecimal> sortedMap = new TreeMap<>();
 
         for (Map.Entry<String, BigDecimal> entry : balancesMap.entrySet()) {
@@ -313,7 +285,6 @@ public class SplitterService {
 
     @Transactional
     public void purchase(LocalDate date, Person payer, BigDecimal amount, List<Person> participantsList) {
-        //TODO: refactor, use actual BigDecimal
         if (participantsList.size() == 0) {
             System.out.println("Group is empty");
             return;
@@ -321,17 +292,12 @@ public class SplitterService {
 
         // Constants
         BigDecimal CENT = BigDecimal.valueOf(0.01);
-        final int DECIMAL_PLACES = 2;
-
-
         BigDecimal sizeOfGroup = BigDecimal.valueOf(participantsList.size());
+        final int DECIMAL_PLACES = 2;
 
         // Calculate amount per person and remainder
         BigDecimal amountPerPerson = amount.divide(sizeOfGroup, DECIMAL_PLACES, RoundingMode.DOWN);
         BigDecimal remainderBD = amount.subtract(amountPerPerson.multiply(sizeOfGroup));
-
-        // back to double
-
 
         Collections.sort(participantsList);
         for (Person person : participantsList) {

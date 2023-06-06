@@ -19,27 +19,33 @@ public class Transaction {
     @Column(columnDefinition = "DATE")
     private LocalDate date;
 
-    private String peoplePair;
-    private String reversePair;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "borrower")
+    private Person borrower;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "lender")
+    private Person lender;
+
     private String type;
     private BigDecimal amount;
 
     public Transaction() {}
 
-    public Transaction(LocalDate date, String type, String peoplePair, String reversePair, BigDecimal amount) {
+    public Transaction(LocalDate date, String type, Person borrower, Person lender, BigDecimal amount) {
         this.date = date;
         this.type = type;
-        this.peoplePair = peoplePair;
-        this.reversePair = reversePair;
+        this.borrower = borrower;
+        this.lender = lender;
         this.amount = amount;
     }
 
-    public String getPeoplePair() {
-        return peoplePair;
+    public Person getBorrower() {
+        return borrower;
     }
 
-    public String getReversePair() {
-        return reversePair;
+    public Person getLender() {
+        return lender;
     }
 
     public BigDecimal getAmount() {

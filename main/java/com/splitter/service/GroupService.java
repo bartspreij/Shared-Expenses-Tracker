@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,7 +42,7 @@ public class GroupService {
     }
 
     @Transactional
-    public void createNewGroup(String groupName, List<Person> members) {
+    public void createNewGroup(String groupName, Set<Person> members) {
         GroupOfPeople group = repository.getByName(groupName);
         if (group != null) {
             deleteGroup(group);
@@ -55,12 +56,12 @@ public class GroupService {
     }
 
     @Transactional
-    public void addMembers(String groupName, List<Person> persons) {
+    public void addMembers(String groupName, Set<Person> persons) {
         repository.getByName(groupName).getPeople().addAll(persons);
     }
 
     @Transactional
-    public void removeMembers(String groupName, List<Person> persons) {
+    public void removeMembers(String groupName, Set<Person> persons) {
         repository.getByName(groupName).getPeople()
                 .removeIf(person -> persons.stream().map(Person::getName)
                         .toList()

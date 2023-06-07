@@ -48,6 +48,14 @@ public class Transaction {
         return lender;
     }
 
+    public String getPeoplePair() {
+        return getBorrower().getName() + " " + getLender().getName();
+    }
+
+    public String getReversePair() {
+        return getLender().getName() + " " + getBorrower().getName();
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }

@@ -2,7 +2,9 @@ package com.splitter.entities;
 
 import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "GROUPS")
@@ -15,19 +17,19 @@ public class GroupOfPeople {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "person_id")
-    private List<Person> people = new ArrayList<>();
+    private Set<Person> people = new HashSet<>();
 
     @Column(name = "name")
     private String name;
 
     public GroupOfPeople() {}
 
-    public GroupOfPeople(String name, List<Person> members) {
+    public GroupOfPeople(String name, Set<Person> members) {
         this.name = name;
         this.people = members;
     }
 
-    public List<Person> getPeople() {
+    public Set<Person> getPeople() {
         return people;
     }
 }

@@ -62,6 +62,40 @@ public class SplitterService {
         return GroupOption.INVALID;
     }
 
+    public void updatePairBalance(Transaction t, Map<String, BigDecimal> pairBalancesToCalculate) {
+        String key = "No key";
+
+        if (pairBalancesToCalculate.containsKey(t.getPeoplePair())) {
+            key = "keyIsPeoplePair";
+        } else if (pairBalancesToCalculate.containsKey(t.getReversePair())) {
+            key = "keyIsReversePair";
+        }
+
+        switch (key) {
+            case "keyIsPeoplePair" -> {
+                if (t.getType().equals("borrow")) {
+                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount(), BigDecimal::add);
+                } else if (t.getType().equals("repay")) {
+                    pairBalancesToCalculate.merge(t.getPeoplePair(), t.getAmount().negate(), BigDecimal::add);
+                }
+            }
+            case "keyIsReversePair" -> {
+                if (t.getType().equals("borrow")) {
+                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount().negate(), BigDecimal::add);
+                } else if (t.getType().equals("repay")) {
+                    pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount(), BigDecimal::add);
+                }
+            }
+            case "No key" -> {
+                if (t.getType().equals("borrow")) {
+                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount());
+                } else if (t.getType().equals("repay")) {
+                    pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount().negate());
+                }
+            }
+        }
+    }
+
     @Transactional
     public void borrow(String input) {
         borrowOrRepay(input, false);
@@ -81,8 +115,7 @@ public class SplitterService {
             Person borrower = personService.getOrAdd(matcher.group("borrower"));
             Person lender = personService.getOrAdd(matcher.group("lender"));
             BigDecimal amount = new BigDecimal(matcher.group("amount"));
-            BigDecimal adjustedAmount = isRepay ? amount.negate() : amount;
-            addTransaction(date, type, borrower, lender, adjustedAmount);
+            addTransaction(date, type, borrower, lender, amount);
 
         } else {
             System.out.println("Illegal command arguments");
@@ -99,15 +132,19 @@ public class SplitterService {
             personsOrGroups = matcher.group("personsAndOrGroups");
         }
 
-        List<Person> participants = fetchParticipants(personsOrGroups);
+        Set<Person> participants = fetchParticipants(personsOrGroups);
+        Map<String, BigDecimal> pairBalanceMap = new HashMap<>();
+        List<Transaction> transactions = transactionService.getTransactionsBeforeAGivenDate(date);
 
-        Map<String, BigDecimal> transactionsByDate = transactionService.getTransactionsBeforeAGivenDate(date).stream()
-                .collect(
-                        groupingBy(
-                                t -> String.format("%s %s", t.getBorrower().getName(), t.getLender().getName()),
-                                mapping(Transaction::getAmount, reducing(BigDecimal.ZERO, BigDecimal::add))));
-
-        return swapAndSortMap(transactionsByDate);
+        for (Transaction t : transactions) {
+            if (participants.isEmpty()) {
+                updatePairBalance(t, pairBalanceMap);
+            } else if (participants.contains(t.getBorrower()) || participants.contains(t.getLender())) {
+                updatePairBalance(t, pairBalanceMap);
+            }
+        }
+        swapAndSortMap(pairBalanceMap, participants);
+        return pairBalanceMap;
     }
 
     public void printBalance(String input) {
@@ -118,7 +155,7 @@ public class SplitterService {
 
         for (String key : sortedMap.keySet()) {
             BigDecimal value = sortedMap.get(key);
-            if (value.compareTo(BigDecimal.valueOf(0.01)) >= 0) { // if value is equal or more than 0.01
+            if (value.compareTo(BigDecimal.ZERO) > 0) {
                 names = key.split(" ");
                 System.out.printf("%s owes %s %.2f\n", names[0], names[1], value);
                 anyRepayments = true;
@@ -138,14 +175,14 @@ public class SplitterService {
         }
     }
 
-    public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {
+    public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap, Set<Person> subSet) {
         Map<String, BigDecimal> sortedMap = new TreeMap<>();
 
         for (Map.Entry<String, BigDecimal> entry : balancesMap.entrySet()) {
             String key = entry.getKey();
             BigDecimal value = entry.getValue();
 
-            if (value.compareTo(BigDecimal.ZERO) < 0) {
+            if (value.compareTo(BigDecimal.ZERO) < 0) { // swap order if balance is negative, so we always print positive
                 String[] names = key.split(" ");
                 if (names.length == 2) {
                     String name1 = names[0];
@@ -153,8 +190,12 @@ public class SplitterService {
                     key = name2 + " " + name1;
                 }
             }
+            if (subSet.isEmpty()) {
+                sortedMap.put(key, value.abs());
+            } else if () {
 
-            sortedMap.put(key, value.abs());
+            }
+
         }
         return sortedMap;
     }
@@ -167,7 +208,7 @@ public class SplitterService {
 
         while (matcher.find()) {
             String groupName = matcher.group("groupName");
-            List<Person> listOfPeople = new ArrayList<>();
+            Set<Person> listOfPeople = new HashSet<>();
             if (!option.equals(GroupOption.SHOW)) {
                 if (matcher.group("personsAndOrGroups") == null) {
                     System.out.println("Illegal command arguments");
@@ -192,11 +233,11 @@ public class SplitterService {
         }
     }
 
-    public void addToGroup(String groupName, List<Person> listOfPeople) {
+    public void addToGroup(String groupName, Set<Person> listOfPeople) {
         groupService.addMembers(groupName, listOfPeople);
     }
 
-    public void removeGroup(String groupName, List<Person> listOfPeople) {
+    public void removeGroup(String groupName, Set<Person> listOfPeople) {
         groupService.removeMembers(groupName, listOfPeople);
     }
 
@@ -210,7 +251,7 @@ public class SplitterService {
         }
     }
 
-    public void collectAllPeopleExceptPrefixMinus(List<Person> TMP, String listOfPersonsAndOrGroups) {
+    public void collectAllPeopleExceptPrefixMinus(Set<Person> TMP, String listOfPersonsAndOrGroups) {
         Matcher matcher = patternMatcher(RegexPatterns.EXTRACT_NAME_OR_GROUP, listOfPersonsAndOrGroups);
 
         while (matcher.find()) {
@@ -226,7 +267,7 @@ public class SplitterService {
         }
     }
 
-    public void removePrefixMinusFromGroup(List<Person> TMP, String toRemove) {
+    public void removePrefixMinusFromGroup(Set<Person> TMP, String toRemove) {
         Matcher matcher = patternMatcher(RegexPatterns.NAMES_TO_REMOVE, toRemove);
 
         while (matcher.find()) {
@@ -243,10 +284,9 @@ public class SplitterService {
         }
     }
 
-
     @Transactional
-    public List<Person> fetchParticipants(String listOfPeopleAndGroups) {
-        List<Person> TMP = new ArrayList<>();
+    public Set<Person> fetchParticipants(String listOfPeopleAndGroups) {
+        Set<Person> TMP = new HashSet<>();
         collectAllPeopleExceptPrefixMinus(TMP, listOfPeopleAndGroups);
         removePrefixMinusFromGroup(TMP, listOfPeopleAndGroups);
         return TMP;
@@ -263,7 +303,7 @@ public class SplitterService {
         return true;
     }
 
-    public void extractInfo(String input, boolean isCashBack) {
+    public void extractInfo(String input, boolean isCashBack) { // cashBack is a reverse purchase so if cashBack reverse
         LocalDate date = dateIncludedOrNot(input);
         Matcher matcher = patternMatcher(isCashBack ? RegexPatterns.CASHBACK_EXTRACT_INFO : RegexPatterns.PURCHASE_EXTRACT_INFO, input);
 
@@ -271,9 +311,9 @@ public class SplitterService {
             Person payer = personService.getOrAdd(matcher.group(1));
             String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
-            List<Person> participants = fetchParticipants(matcher.group(4));
+            Set<Person> participants = fetchParticipants(matcher.group(4));
             BigDecimal adjustedAmount = BigDecimal.valueOf(isCashBack ? -amount : amount);
-            purchase(date, payer, adjustedAmount, participants);
+            purchase(date, payer, adjustedAmount, participants, isCashBack);
         }
     }
 
@@ -284,7 +324,7 @@ public class SplitterService {
     public void cashBackExtractInfo(String input) { extractInfo(input, true); }
 
     @Transactional
-    public void purchase(LocalDate date, Person payer, BigDecimal amount, List<Person> participantsList) {
+    public void purchase(LocalDate date, Person payer, BigDecimal amount, Set<Person> participantsList, boolean isCashBack) {
         if (participantsList.size() == 0) {
             System.out.println("Group is empty");
             return;
@@ -299,15 +339,18 @@ public class SplitterService {
         BigDecimal amountPerPerson = amount.divide(sizeOfGroup, DECIMAL_PLACES, RoundingMode.DOWN);
         BigDecimal remainderBD = amount.subtract(amountPerPerson.multiply(sizeOfGroup));
 
-        Collections.sort(participantsList);
-        for (Person person : participantsList) {
+        List<Person> orderedParticipantsList = new ArrayList<>(participantsList);
+        Collections.sort(orderedParticipantsList);
+        for (Person person : orderedParticipantsList) {
             if (person.equals(payer)) {
-                remainderBD = remainderBD.subtract(CENT); // remainder left or not remove cent
+                if (remainderBD.compareTo(BigDecimal.ZERO) != 0) {
+                    remainderBD = remainderBD.subtract(isCashBack ? CENT.negate() : CENT);
+                }
                 continue;
             }
-            if (remainderBD.compareTo(BigDecimal.ZERO) > 0) { // while there is remainder left
-                addTransaction(date, "borrow", person, payer, amountPerPerson.add(CENT));
-                remainderBD = remainderBD.subtract(CENT); // we remove the cent
+            if (remainderBD.compareTo(BigDecimal.ZERO) != 0) { // while there is remainder left
+                addTransaction(date, "borrow", person, payer, amountPerPerson.add(isCashBack ? CENT.negate() : CENT));
+                remainderBD = isCashBack ? remainderBD.add(CENT) : remainderBD.subtract(CENT); // we remove the cent
             } else {
                 addTransaction(date, "borrow", person, payer, amountPerPerson);
             }

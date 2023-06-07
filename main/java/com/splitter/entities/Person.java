@@ -3,6 +3,7 @@ package com.splitter.entities;
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(name = "PEOPLE")
@@ -29,21 +30,37 @@ public class Person implements Comparable<Person>{
         this.name = name;
     }
 
+    public String getName() {
+        return name;
+    }
+    public void setSecretSantaRecipient(Person recipient) {
+        secretSantaRecipient = recipient;
+    }
+    public Person getSecretSantaRecipient() {
+        return secretSantaRecipient;
+    }
+
     @Override
     public int compareTo(Person o) {
         return this.name.compareTo(o.name);
     }
 
-    public String getName() {
-        return name;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Person person = (Person) o;
+
+        if (id != person.id) return false;
+        return getName() != null ? getName().equals(person.getName()) : person.getName() == null;
     }
 
-    public void setSecretSantaRecipient(Person recipient) {
-        secretSantaRecipient = recipient;
-    }
-
-    public Person getSecretSantaRecipient() {
-        return secretSantaRecipient;
+    @Override
+    public int hashCode() {
+        int result = (int) (id ^ (id >>> 32));
+        result = 31 * result + (getName() != null ? getName().hashCode() : 0);
+        return result;
     }
 }
 

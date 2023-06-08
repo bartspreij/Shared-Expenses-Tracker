@@ -86,7 +86,7 @@ public class SplitterService {
                     pairBalancesToCalculate.merge(t.getReversePair(), t.getAmount(), BigDecimal::add);
                 }
             }
-            case "No key" -> {
+            case "No key" -> { // new pair
                 if (t.getType().equals("borrow")) {
                     pairBalancesToCalculate.putIfAbsent(t.getPeoplePair(), t.getAmount());
                 } else if (t.getType().equals("repay")) {
@@ -122,43 +122,57 @@ public class SplitterService {
         }
     }
 
-    public Map<String, BigDecimal> getBalance(String input) {
-        String status = input.contains("open") ? "open" : "close"; // default is close
-        LocalDate date = status.equals("close") ? dateIncludedOrNot(input) : dateIncludedOrNot(input).withDayOfMonth(1).minusDays(1);
+    public List<String> getSubGroupToPrint(String input) { // when (GROUP, people) included we take a subSet
 
         String personsOrGroups = "";
         Matcher matcher = patternMatcher(RegexPatterns.BALANCE_EXTRACT_INFO, input);
         while (matcher.find()) {
-            personsOrGroups = matcher.group("personsAndOrGroups");
+            if (matcher.group("personsAndOrGroups").isEmpty()) {
+                return new ArrayList<>();
+            } else {
+                personsOrGroups = matcher.group("personsAndOrGroups");
+            }
+            Set<Person> subGroup = fetchParticipants(personsOrGroups);
+
         }
 
-        Set<Person> participants = fetchParticipants(personsOrGroups);
+        return fetchParticipants(personsOrGroups).stream()
+                .map(Person::getName)
+                .toList();
+    }
+
+    public Map<String, BigDecimal> getBalance(String input) {
+        String status = input.contains("open") ? "open" : "close"; // default is close
+        LocalDate date = status.equals("close") ? dateIncludedOrNot(input) : dateIncludedOrNot(input).withDayOfMonth(1).minusDays(1);
+
         Map<String, BigDecimal> pairBalanceMap = new HashMap<>();
         List<Transaction> transactions = transactionService.getTransactionsBeforeAGivenDate(date);
 
         for (Transaction t : transactions) {
-            if (participants.isEmpty()) {
-                updatePairBalance(t, pairBalanceMap);
-            } else if (participants.contains(t.getBorrower()) || participants.contains(t.getLender())) {
-                updatePairBalance(t, pairBalanceMap);
-            }
+            updatePairBalance(t, pairBalanceMap);
         }
-        swapAndSortMap(pairBalanceMap, participants);
-        return pairBalanceMap;
+        return swapAndSortMap(pairBalanceMap);
     }
 
     public void printBalance(String input) {
-        Map<String, BigDecimal> sortedMap = getBalance(input);
+        // TODO: fix this garbage
+        List<String> subGroup = getSubGroupToPrint(input);
+        if (!subGroup.isEmpty() && subGroup.get(0).equals("Group is empty")) {
+            System.out.println("Group is empty");
+            return;
+        }
 
+        Map<String, BigDecimal> sortedMap = getBalance(input);
         boolean anyRepayments = false;
         String[] names;
-
         for (String key : sortedMap.keySet()) {
             BigDecimal value = sortedMap.get(key);
             if (value.compareTo(BigDecimal.ZERO) > 0) {
                 names = key.split(" ");
-                System.out.printf("%s owes %s %.2f\n", names[0], names[1], value);
-                anyRepayments = true;
+                if (subGroup.isEmpty() || subGroup.contains(names[0])) {
+                    System.out.printf("%s owes %s %.2f\n", names[0], names[1], value);
+                    anyRepayments = true;
+                }
             }
         }
         if (!anyRepayments) {
@@ -166,16 +180,7 @@ public class SplitterService {
         }
     }
 
-    public LocalDate dateIncludedOrNot(String input) {
-        Matcher matcher = patternMatcher(RegexPatterns.DATE_PATTERN, input);
-        if (matcher.find()) {
-            return LocalDate.parse(matcher.group().replace(".", "-"));
-        } else {
-            return LocalDate.now();
-        }
-    }
-
-    public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap, Set<Person> subSet) {
+    public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {
         Map<String, BigDecimal> sortedMap = new TreeMap<>();
 
         for (Map.Entry<String, BigDecimal> entry : balancesMap.entrySet()) {
@@ -190,14 +195,18 @@ public class SplitterService {
                     key = name2 + " " + name1;
                 }
             }
-            if (subSet.isEmpty()) {
-                sortedMap.put(key, value.abs());
-            } else if () {
-
-            }
-
+            sortedMap.put(key, value.abs());
         }
         return sortedMap;
+    }
+
+    public LocalDate dateIncludedOrNot(String input) {
+        Matcher matcher = patternMatcher(RegexPatterns.DATE_PATTERN, input);
+        if (matcher.find()) {
+            return LocalDate.parse(matcher.group().replace(".", "-"));
+        } else {
+            return LocalDate.now();
+        }
     }
 
     public void validateGroupInput(String input) {
@@ -257,8 +266,11 @@ public class SplitterService {
         while (matcher.find()) {
             String name = matcher.group("name");
             if (isStringUpperCase(name)) { // it's a group
-                GroupOfPeople fetchedGroup = groupService.getGroup(name);
-                for (Person p : fetchedGroup.getPeople()) {
+                if (!groupService.exists(name)) {
+                    System.out.println("Unknown group");
+                    return;
+                }
+                for (Person p : groupService.getGroup(name).getPeople()) {
                     TMP.add(personService.getOrAdd(p.getName()));
                 }
             } else { // it's a person
@@ -395,13 +407,7 @@ public class SplitterService {
 
         switch (openOrClose) {
             case "open" -> transactionService.deleteByDateIsLessThan(date.withDayOfMonth(1));
-            case "close" -> {
-                if (date.isEqual(LocalDate.now())) { // date is write off everything before today
-                    transactionService.deleteByDateIsLessThanEqual(LocalDate.now());
-                    break;
-                }
-                transactionService.deleteByDateIsLessThanEqual(date);
-            }
+            case "close" -> transactionService.deleteByDateIsLessThanEqual(date);
         }
     }
 }

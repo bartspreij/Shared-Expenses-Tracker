@@ -23,6 +23,7 @@ public class GroupService {
     public List<String> getMembers(String groupName) {
         return repository.getByName(groupName).getPeople().stream()
                 .map(Person::getName)
+                .sorted()
                 .collect(Collectors.toList());
     }
 

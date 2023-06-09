@@ -1,6 +1,7 @@
 package com.splitter.cli;
 
 import com.splitter.service.SplitterService;
+import org.springframework.stereotype.Service;
 
 import java.util.Scanner;
 

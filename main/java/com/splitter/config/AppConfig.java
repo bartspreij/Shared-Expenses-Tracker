@@ -1,4 +1,4 @@
-package com.splitter.app;
+package com.splitter.config;
 
 import com.splitter.cli.TextUI;
 import com.splitter.service.SplitterService;
@@ -27,4 +27,3 @@ public class AppConfig {
         return new TextUI(scanner, splitterLogic);
     }
 }
-

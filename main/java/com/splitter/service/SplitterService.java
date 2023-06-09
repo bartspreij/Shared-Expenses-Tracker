@@ -7,6 +7,7 @@ import com.splitter.entities.GroupOfPeople;
 import com.splitter.entities.Person;
 import com.splitter.entities.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 
 import static java.util.stream.Collectors.*;
 
+@Service
 public class SplitterService {
     private final TransactionService transactionService;
     private final GroupService groupService;
@@ -122,21 +124,18 @@ public class SplitterService {
         }
     }
 
-    public List<String> getSubGroupToPrint(String input) { // when (GROUP, people) included we take a subSet
+    public boolean isThereASubGroup(String input) {
+        Matcher matcher = patternMatcher(RegexPatterns.PERSONS_OR_GROUPS, input);
+        return matcher.find();
+    }
 
-        String personsOrGroups = "";
-        Matcher matcher = patternMatcher(RegexPatterns.BALANCE_EXTRACT_INFO, input);
+    public List<String> getSubGroup(String input) {
+        Matcher matcher = patternMatcher(RegexPatterns.PERSONS_OR_GROUPS, input);
+        String personsAndOrGroups = "";
         while (matcher.find()) {
-            if (matcher.group("personsAndOrGroups").isEmpty()) {
-                return new ArrayList<>();
-            } else {
-                personsOrGroups = matcher.group("personsAndOrGroups");
-            }
-            Set<Person> subGroup = fetchParticipants(personsOrGroups);
-
+            personsAndOrGroups = matcher.group("personsAndOrGroups");
         }
-
-        return fetchParticipants(personsOrGroups).stream()
+        return fetchParticipants(personsAndOrGroups).stream()
                 .map(Person::getName)
                 .toList();
     }
@@ -156,10 +155,16 @@ public class SplitterService {
 
     public void printBalance(String input) {
         // TODO: fix this garbage
-        List<String> subGroup = getSubGroupToPrint(input);
-        if (!subGroup.isEmpty() && subGroup.get(0).equals("Group is empty")) {
-            System.out.println("Group is empty");
-            return;
+        List<String> subGroup = new ArrayList<>();
+        if (isThereASubGroup(input)) {
+            subGroup = getSubGroup(input);
+            if (subGroup.isEmpty()) {
+                System.out.println("Group is empty");
+                return;
+            } else if (subGroup.get(0).equals("Unknown group")) {
+                System.out.println("Group does not exist");
+                return;
+            }
         }
 
         Map<String, BigDecimal> sortedMap = getBalance(input);
@@ -188,10 +193,10 @@ public class SplitterService {
             BigDecimal value = entry.getValue();
 
             if (value.compareTo(BigDecimal.ZERO) < 0) { // swap order if balance is negative, so we always print positive
-                String[] names = key.split(" ");
-                if (names.length == 2) {
-                    String name1 = names[0];
-                    String name2 = names[1];
+                String[] splitNames = key.split(" ");
+                if (splitNames.length == 2) {
+                    String name1 = splitNames[0];
+                    String name2 = splitNames[1];
                     key = name2 + " " + name1;
                 }
             }
@@ -266,8 +271,8 @@ public class SplitterService {
         while (matcher.find()) {
             String name = matcher.group("name");
             if (isStringUpperCase(name)) { // it's a group
-                if (!groupService.exists(name)) {
-                    System.out.println("Unknown group");
+                if(!groupService.exists(name)) { // add unknown group to check for if printing
+                    TMP.add(new Person("Unknown group"));
                     return;
                 }
                 for (Person p : groupService.getGroup(name).getPeople()) {

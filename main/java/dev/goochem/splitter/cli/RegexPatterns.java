@@ -1,4 +1,4 @@
-package com.splitter.cli;
+package dev.goochem.splitter.cli;
 
 public class RegexPatterns {
     public static final String DATE_PATTERN = "(?<date>\\d{4}[.]\\d{2}[.]\\d{2})";

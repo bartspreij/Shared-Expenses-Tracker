@@ -1,8 +1,8 @@
-package com.splitter.service;
+package dev.goochem.splitter.service;
 
-import com.splitter.entities.GroupOfPeople;
-import com.splitter.entities.Person;
-import com.splitter.repository.GroupRepository;
+import dev.goochem.splitter.entities.GroupOfPeople;
+import dev.goochem.splitter.entities.Person;
+import dev.goochem.splitter.repository.GroupRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

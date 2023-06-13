@@ -1,9 +1,8 @@
-package com.splitter.entities;
+package dev.goochem.splitter.entities;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Table(name = "PEOPLE")
@@ -33,11 +32,15 @@ public class Person implements Comparable<Person>{
     public String getName() {
         return name;
     }
+    public long getId() { return id;}
+    public Person getSecretSantaRecipient() {
+        return secretSantaRecipient;
+    }
     public void setSecretSantaRecipient(Person recipient) {
         secretSantaRecipient = recipient;
     }
-    public Person getSecretSantaRecipient() {
-        return secretSantaRecipient;
+    public void setId(long id) {
+        this.id = id;
     }
 
     @Override

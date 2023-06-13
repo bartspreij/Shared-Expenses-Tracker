@@ -1,7 +1,6 @@
-package com.splitter.cli;
+package dev.goochem.splitter.cli;
 
-import com.splitter.service.SplitterService;
-import org.springframework.stereotype.Service;
+import dev.goochem.splitter.service.SplitterService;
 
 import java.util.Scanner;
 
@@ -37,6 +36,7 @@ public class TextUI {
                 case BORROW -> logic.borrow(input);
                 case REPAY -> logic.repay(input);
                 case BALANCE -> logic.printBalance(input);
+                case BALANCE_PERFECT -> logic.printBalancePerfect(input);
                 case GROUP -> logic.validateGroupInput(input);
                 case PURCHASE -> logic.purchaseExtractInfo(input);
                 case SECRET_SANTA -> logic.secretSanta(input.split("\\s")[1]);

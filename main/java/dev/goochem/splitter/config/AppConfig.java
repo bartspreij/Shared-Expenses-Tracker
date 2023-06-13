@@ -1,10 +1,11 @@
-package com.splitter.config;
+package dev.goochem.splitter.config;
 
-import com.splitter.cli.TextUI;
-import com.splitter.service.SplitterService;
-import com.splitter.service.GroupService;
-import com.splitter.service.PersonService;
-import com.splitter.service.TransactionService;
+import dev.goochem.splitter.cli.TextUI;
+import dev.goochem.splitter.graph.ExpenseGraph;
+import dev.goochem.splitter.service.SplitterService;
+import dev.goochem.splitter.service.GroupService;
+import dev.goochem.splitter.service.PersonService;
+import dev.goochem.splitter.service.TransactionService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,5 +26,10 @@ public class AppConfig {
     @Bean
     public TextUI textUI(Scanner scanner, SplitterService splitterLogic) {
         return new TextUI(scanner, splitterLogic);
+    }
+
+    @Bean
+    public ExpenseGraph expenseGraph() {
+        return new ExpenseGraph();
     }
 }

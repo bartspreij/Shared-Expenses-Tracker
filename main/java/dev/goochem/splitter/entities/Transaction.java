@@ -1,4 +1,4 @@
-package com.splitter.entities;
+package dev.goochem.splitter.entities;
 
 import org.springframework.format.annotation.DateTimeFormat;
 

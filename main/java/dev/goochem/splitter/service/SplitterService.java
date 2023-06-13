@@ -1,11 +1,13 @@
-package com.splitter.service;
+package dev.goochem.splitter.service;
 
-import com.splitter.cli.GroupOption;
-import com.splitter.cli.RegexPatterns;
-import com.splitter.cli.UsageOption;
-import com.splitter.entities.GroupOfPeople;
-import com.splitter.entities.Person;
-import com.splitter.entities.Transaction;
+import dev.goochem.splitter.cli.GroupOption;
+import dev.goochem.splitter.cli.RegexPatterns;
+import dev.goochem.splitter.cli.UsageOption;
+import dev.goochem.splitter.entities.GroupOfPeople;
+import dev.goochem.splitter.entities.Person;
+import dev.goochem.splitter.entities.Transaction;
+import dev.goochem.splitter.graph.ExpenseGraph;
+import dev.goochem.splitter.graph.Node;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +18,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.util.stream.Collectors.*;
 
 @Service
 public class SplitterService {
@@ -183,6 +183,39 @@ public class SplitterService {
         if (!anyRepayments) {
             System.out.println("No repayments");
         }
+    }
+
+    public void printBalancePerfect(String input) {
+        ExpenseGraph graph = new ExpenseGraph();
+        Map<String, BigDecimal> sortedMap = getBalance(input);
+
+        // Strip nodes
+        Set<String> namesForNodes = new HashSet<>(); // no duplicate root nodes
+        for (String key : sortedMap.keySet()) {
+            String name = key.split(" ")[0];
+            namesForNodes.add(name);
+        }
+
+        // Add new nodes
+        for (String name : namesForNodes) {
+            graph.addNode(new Node(name));
+        }
+
+        // Add edges
+        for (Map.Entry<String, BigDecimal> entry : sortedMap.entrySet()) {
+            String key = entry.getKey();
+            double value = entry.getValue().doubleValue();
+            String[] splitNames = key.split(" ");
+            String name1 = splitNames[0];
+            String name2 = splitNames[1];
+
+            graph.addEdge(name1, name2, value);
+        }
+
+        // Optimize through Folker-Fulkerson algorithm
+
+
+        graph.print();
     }
 
     public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {

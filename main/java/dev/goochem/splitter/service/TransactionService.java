@@ -1,16 +1,13 @@
-package com.splitter.service;
+package dev.goochem.splitter.service;
 
-import com.splitter.entities.Person;
-import com.splitter.entities.Transaction;
-import com.splitter.repository.TransactionRepository;
+import dev.goochem.splitter.entities.Transaction;
+import dev.goochem.splitter.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class TransactionService {

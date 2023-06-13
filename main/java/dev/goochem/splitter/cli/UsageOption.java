@@ -1,7 +1,8 @@
-package com.splitter.cli;
+package dev.goochem.splitter.cli;
 
 public enum UsageOption {
     BALANCE("balance"),
+    BALANCE_PERFECT("balancePerfect"),
     BORROW("borrow"),
     CASH_BACK("cashBack"),
     EXIT("exit"),

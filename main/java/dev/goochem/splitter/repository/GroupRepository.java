@@ -1,6 +1,6 @@
-package com.splitter.repository;
+package dev.goochem.splitter.repository;
 
-import com.splitter.entities.GroupOfPeople;
+import dev.goochem.splitter.entities.GroupOfPeople;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

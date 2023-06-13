@@ -1,6 +1,6 @@
-package com.splitter.repository;
+package dev.goochem.splitter.repository;
 
-import com.splitter.entities.Person;
+import dev.goochem.splitter.entities.Person;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

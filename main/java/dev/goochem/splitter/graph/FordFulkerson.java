@@ -1,6 +1,9 @@
 package dev.goochem.splitter.graph;
 
-public class FordFulkerson {
+import java.util.ArrayList;
+import java.util.List;
+
+public class FordFulkerson<T> {
 
 /*    1. Initialize the flow network: Set the initial flow in each edge to 0.
       2. While there is a path from the source to the sink in the residual graph:

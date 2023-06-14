@@ -6,8 +6,10 @@ import dev.goochem.splitter.cli.UsageOption;
 import dev.goochem.splitter.entities.GroupOfPeople;
 import dev.goochem.splitter.entities.Person;
 import dev.goochem.splitter.entities.Transaction;
-import dev.goochem.splitter.graph.ExpenseGraph;
-import dev.goochem.splitter.graph.Node;
+import dev.goochem.splitter.graph.DepthFirstSearch;
+import dev.goochem.splitter.graph.Graph;
+import dev.goochem.splitter.graph.TestGraph;
+import dev.goochem.splitter.graph.Vertex;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -186,36 +188,36 @@ public class SplitterService {
     }
 
     public void printBalancePerfect(String input) {
-        ExpenseGraph graph = new ExpenseGraph();
-        Map<String, BigDecimal> sortedMap = getBalance(input);
+        Graph splitterNetwork = new Graph(true, true);
+        Map<String, BigDecimal> pairBalances = getBalance(input);
 
-        // Strip nodes
-        Set<String> namesForNodes = new HashSet<>(); // no duplicate root nodes
-        for (String key : sortedMap.keySet()) {
-            String name = key.split(" ")[0];
-            namesForNodes.add(name);
-        }
-
-        // Add new nodes
-        for (String name : namesForNodes) {
-            graph.addNode(new Node(name));
-        }
-
-        // Add edges
-        for (Map.Entry<String, BigDecimal> entry : sortedMap.entrySet()) {
+        // Add nodes & edges
+        for (Map.Entry<String, BigDecimal> entry : pairBalances.entrySet()) {
             String key = entry.getKey();
             double value = entry.getValue().doubleValue();
             String[] splitNames = key.split(" ");
             String name1 = splitNames[0];
             String name2 = splitNames[1];
 
-            graph.addEdge(name1, name2, value);
+            Vertex vertexFrom = splitterNetwork.getVertexByValue(name1);
+            if (vertexFrom == null) {
+                vertexFrom = splitterNetwork.addVertex(name1);
+            }
+            Vertex vertexTo = splitterNetwork.getVertexByValue(name2);
+            if (vertexTo == null) {
+                vertexTo = splitterNetwork.addVertex(name2);
+            }
+            splitterNetwork.addEdge(vertexFrom, vertexTo, value);
         }
+        splitterNetwork.print();
 
+        // DFS
+        DepthFirstSearch DFS = new DepthFirstSearch();
+        List<Vertex> visitedVertices = new ArrayList<>();
+        Vertex start = splitterNetwork.getVertices().get(0);
+        visitedVertices.add(start);
+        DFS.traverseRecursively(start, visitedVertices);
         // Optimize through Folker-Fulkerson algorithm
-
-
-        graph.print();
     }
 
     public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {

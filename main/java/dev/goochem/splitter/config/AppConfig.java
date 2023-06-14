@@ -1,7 +1,7 @@
 package dev.goochem.splitter.config;
 
 import dev.goochem.splitter.cli.TextUI;
-import dev.goochem.splitter.graph.ExpenseGraph;
+import dev.goochem.splitter.graph.Graph;
 import dev.goochem.splitter.service.SplitterService;
 import dev.goochem.splitter.service.GroupService;
 import dev.goochem.splitter.service.PersonService;
@@ -29,7 +29,7 @@ public class AppConfig {
     }
 
     @Bean
-    public ExpenseGraph expenseGraph() {
-        return new ExpenseGraph();
+    public Graph graph() {
+        return new Graph(true, true);
     }
 }

@@ -2,15 +2,19 @@ package dev.goochem.splitter.graph;
 
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.List;
 
-public class DepthFirstSearch<T> {
-    public void traverseRecursively(Node<T> node) {
-        node.setVisited(true);
-        System.out.println(node);
-        node.getNeighbors().forEach(neighbor -> {
-            if (!neighbor.isVisited()) {
-                traverseRecursively(neighbor);
+public class DepthFirstSearch {
+    public void traverseRecursively(Vertex start, List<Vertex> visitedVertices) {
+        System.out.println(start.getData());
+
+        for (Edge e : start.getEdges()) {
+            Vertex neighbor = e.getEnd();
+
+            if (!visitedVertices.contains(neighbor)) {
+                visitedVertices.add(neighbor);
+                traverseRecursively(neighbor, visitedVertices);
             }
-        });
+        }
     }
 }

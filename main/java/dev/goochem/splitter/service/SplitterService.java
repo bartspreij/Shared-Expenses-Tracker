@@ -6,13 +6,10 @@ import dev.goochem.splitter.cli.UsageOption;
 import dev.goochem.splitter.entities.GroupOfPeople;
 import dev.goochem.splitter.entities.Person;
 import dev.goochem.splitter.entities.Transaction;
-import dev.goochem.splitter.graph.DepthFirstSearch;
-import dev.goochem.splitter.graph.Graph;
-import dev.goochem.splitter.graph.TestGraph;
-import dev.goochem.splitter.graph.Vertex;
+import dev.goochem.splitter.graph.Edge;
+import dev.goochem.splitter.graph.FordFulkersonDfsSolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -188,10 +185,33 @@ public class SplitterService {
     }
 
     public void printBalancePerfect(String input) {
-        Graph splitterNetwork = new Graph(true, true);
+        // TODO: refactor by adding sum of owed and lent for super s and super t
         Map<String, BigDecimal> pairBalances = getBalance(input);
 
-        // Add nodes & edges
+        Set<String> uniqueNames = new HashSet<>();
+        for (String pair : pairBalances.keySet()) {
+            String[] splitNames = pair.split(" ");
+            uniqueNames.add(splitNames[0]);
+            uniqueNames.add(splitNames[1]);
+        }
+
+        int n = uniqueNames.size();
+        int s = n - 2;
+        int t = n - 1;
+        FordFulkersonDfsSolver solver = new FordFulkersonDfsSolver(n, s, t);
+
+        // Create a mapping between names and indices
+        Map<String, Integer> nameToIndex = new HashMap<>();
+        int index = 0;
+        for (String name : uniqueNames) {
+            nameToIndex.put(name, index);
+            index++;
+        }
+
+        /*
+        Maybe refactor add actual Person class and add owed and lent as variables to Person.
+        This way we can create a super source with sum of lent and a super sink with sum of owed
+         */
         for (Map.Entry<String, BigDecimal> entry : pairBalances.entrySet()) {
             String key = entry.getKey();
             double value = entry.getValue().doubleValue();
@@ -199,25 +219,31 @@ public class SplitterService {
             String name1 = splitNames[0];
             String name2 = splitNames[1];
 
-            Vertex vertexFrom = splitterNetwork.getVertexByValue(name1);
-            if (vertexFrom == null) {
-                vertexFrom = splitterNetwork.addVertex(name1);
-            }
-            Vertex vertexTo = splitterNetwork.getVertexByValue(name2);
-            if (vertexTo == null) {
-                vertexTo = splitterNetwork.addVertex(name2);
-            }
-            splitterNetwork.addEdge(vertexFrom, vertexTo, value);
-        }
-        splitterNetwork.print();
+            int personId1 = nameToIndex.get(name1);
+            int personId2 = nameToIndex.get(name2);
 
-        // DFS
-        DepthFirstSearch DFS = new DepthFirstSearch();
-        List<Vertex> visitedVertices = new ArrayList<>();
-        Vertex start = splitterNetwork.getVertices().get(0);
-        visitedVertices.add(start);
-        DFS.traverseRecursively(start, visitedVertices);
-        // Optimize through Folker-Fulkerson algorithm
+            solver.addEdge(personId1, personId2, value);
+        }
+
+        List<Edge>[] resultGraph = solver.getGraph();
+        for (List<Edge> edges : resultGraph) {
+            for (Edge e : edges) {
+                if (e.getFlow() > 0) {
+                    String from = getKeyByValue(e.getFrom(), nameToIndex);
+                    String to = getKeyByValue(e.getTo(), nameToIndex);
+                    System.out.printf("%s owes %s %.2f", from, to, e.getFlow());
+                }
+            }
+        }
+    }
+
+    public  String getKeyByValue(int value, Map<String, Integer> nameToIndex) {
+        for (Map.Entry<String, Integer> entry : nameToIndex.entrySet()) {
+            if (entry.getValue() == value) {
+                return entry.getKey();
+            }
+        }
+        return null; // not found in map
     }
 
     public Map<String, BigDecimal> swapAndSortMap(Map<String, BigDecimal> balancesMap) {
@@ -425,7 +451,6 @@ public class SplitterService {
 
             for (String giver : sortedPeople) {
                 for (String receiver  : randomPeople) {
-
                     if (!giver.equals(receiver) &&
                             (personService.getOrAdd(receiver).getSecretSantaRecipient() == null || !personService.getOrAdd(receiver).getSecretSantaRecipient().equals(personService.getOrAdd(giver)))) {
 

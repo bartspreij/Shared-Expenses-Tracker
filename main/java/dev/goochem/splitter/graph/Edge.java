@@ -1,17 +1,38 @@
 package dev.goochem.splitter.graph;
 
-import dev.goochem.splitter.graph.Vertex;
 import lombok.Data;
 
 @Data
 public class Edge {
-    private Vertex start;
-    private Vertex end;
-    private Double weight;
+    private int from, to;
+    private Edge residual;
+    private double flow;
+    private double capacity;
 
-    public Edge(Vertex startV, Vertex endV, Double inputWeight) {
-        this.start = startV;
-        this.end = endV;
-        this.weight = inputWeight;
+    public Edge(int from, int to, double capacity) {
+        this.from = from;
+        this.to = to;
+        this.capacity = capacity;
+    }
+
+    public boolean isResidual() {
+        return capacity == 0;
+    }
+
+    public double remainingCapacity() {
+        return capacity - flow;
+    }
+
+    public void augment(double bottleNeck) {
+        flow += bottleNeck;
+        residual.flow -= bottleNeck;
+    }
+
+    public String toString(int s, int t) {
+        String u = (from == s) ? "s" : ((from == t) ? "t" : String.valueOf(from));
+        String v = (to == s) ? "s" : ((to == t) ? "t" : String.valueOf(to));
+        return String.format(
+                "Edge %s -> %s | flow = %.2f | capacity = %.2f | is residual: %s",
+                u, v, flow, capacity, isResidual());
     }
 }

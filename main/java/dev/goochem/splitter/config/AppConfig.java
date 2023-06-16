@@ -1,7 +1,6 @@
 package dev.goochem.splitter.config;
 
 import dev.goochem.splitter.cli.TextUI;
-import dev.goochem.splitter.graph.Graph;
 import dev.goochem.splitter.service.SplitterService;
 import dev.goochem.splitter.service.GroupService;
 import dev.goochem.splitter.service.PersonService;
@@ -26,10 +25,5 @@ public class AppConfig {
     @Bean
     public TextUI textUI(Scanner scanner, SplitterService splitterLogic) {
         return new TextUI(scanner, splitterLogic);
-    }
-
-    @Bean
-    public Graph graph() {
-        return new Graph(true, true);
     }
 }

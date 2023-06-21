@@ -1,9 +1,11 @@
 package dev.goochem.splitter.graph;
 
-
 import java.util.List;
 
-import static java.lang.Double.min;
+import static java.lang.Math.min;
+import java.math.BigDecimal;
+import static java.math.BigDecimal.ZERO;
+
 
 public class FordFulkersonDfsSolver extends NetworkFlowSolverBase {
 
@@ -24,13 +26,13 @@ public class FordFulkersonDfsSolver extends NetworkFlowSolverBase {
     @Override
     public void solve() {
         // Find max flow by adding all augmenting path flows.
-        for (double f = dfs(s, INF); f != 0; f = dfs(s, INF)) {
+        for (BigDecimal f = dfs(s, INF); f.compareTo(ZERO) != 0; f = dfs(s, INF)) {
             visitedToken++;
-            maxFlow += f;
+            maxFlow = maxFlow.add(f);
         }
     }
 
-    private double dfs(int node, double flow) { // Depth first search
+    private BigDecimal dfs(int node, BigDecimal flow) {
         // At sink node, return augmented path flow.
         if (node == t) return flow;
 
@@ -39,17 +41,18 @@ public class FordFulkersonDfsSolver extends NetworkFlowSolverBase {
 
         List<Edge> edges = graph[node];
         for (Edge edge : edges) {
-            if (edge.remainingCapacity() > 0 && visited[edge.getTo()] != visitedToken) {
-                double bottleNeck = dfs(edge.getTo(), min(flow, edge.remainingCapacity()));
+            if (edge.remainingCapacity().compareTo(ZERO) > 0 && visited[edge.to] != visitedToken) {
+                BigDecimal bottleNeck = dfs(edge.to, flow.min(edge.remainingCapacity()));
 
                 // If we made it from s -> t (a.k.a bottleNeck > 0) then
                 // augment flow with bottleneck value.
-                if (bottleNeck > 0) {
+                if (bottleNeck.compareTo(ZERO) > 0) {
                     edge.augment(bottleNeck);
                     return bottleNeck;
                 }
             }
         }
-        return 0;
+        return ZERO;
     }
 }
+

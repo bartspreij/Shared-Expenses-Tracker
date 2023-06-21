@@ -187,6 +187,7 @@ public class SplitterService {
     public void printBalancePerfect(String input) {
         // TODO: refactor by adding sum of owed and lent for super s and super t
         Map<String, BigDecimal> pairBalances = getBalance(input);
+        final BigDecimal THOUSAND = new BigDecimal(1000);
 
         Set<String> uniqueNames = new HashSet<>();
         for (String pair : pairBalances.keySet()) {
@@ -195,10 +196,11 @@ public class SplitterService {
             uniqueNames.add(splitNames[1]);
         }
 
-        int n = uniqueNames.size();
-        int s = n - 2;
-        int t = n - 1;
+        int n = uniqueNames.size() + 2; // for super source and sink
+        int s = n - 2; // super source
+        int t = n - 1; // super sink
         FordFulkersonDfsSolver solver = new FordFulkersonDfsSolver(n, s, t);
+
 
         // Create a mapping between names and indices
         Map<String, Integer> nameToIndex = new HashMap<>();
@@ -208,13 +210,9 @@ public class SplitterService {
             index++;
         }
 
-        /*
-        Maybe refactor add actual Person class and add owed and lent as variables to Person.
-        This way we can create a super source with sum of lent and a super sink with sum of owed
-         */
         for (Map.Entry<String, BigDecimal> entry : pairBalances.entrySet()) {
             String key = entry.getKey();
-            double value = entry.getValue().doubleValue();
+            BigDecimal value = entry.getValue();
             String[] splitNames = key.split(" ");
             String name1 = splitNames[0];
             String name2 = splitNames[1];
@@ -222,20 +220,33 @@ public class SplitterService {
             int personId1 = nameToIndex.get(name1);
             int personId2 = nameToIndex.get(name2);
 
+            solver.addEdge(s, personId1, BigDecimal.valueOf(Long.MAX_VALUE));
             solver.addEdge(personId1, personId2, value);
+            solver.addEdge(personId2, t, BigDecimal.valueOf(Long.MAX_VALUE));
         }
 
+        // Prints:
+        // Maximum Flow is: 23
+        System.out.printf("Maximum Flow is: %.2f\n", solver.getMaxFlow());
+
         List<Edge>[] resultGraph = solver.getGraph();
+
+        // Displays all edges part of the resulting residual graph.
+        for (List<Edge> edges : resultGraph) for (Edge e : edges) System.out.println(e.toString(s, t));
+
+
         for (List<Edge> edges : resultGraph) {
             for (Edge e : edges) {
-                if (e.getFlow() > 0) {
+                if (e.getFlow().compareTo(BigDecimal.ZERO) > 0) {
                     String from = getKeyByValue(e.getFrom(), nameToIndex);
                     String to = getKeyByValue(e.getTo(), nameToIndex);
-                    System.out.printf("%s owes %s %.2f", from, to, e.getFlow());
+                    BigDecimal flow = e.getFlow().abs(); // Use absolute value to remove negative sign
+                    System.out.printf("%s owes %s %.2f%n", from, to, flow);
                 }
             }
         }
     }
+
 
     public  String getKeyByValue(int value, Map<String, Integer> nameToIndex) {
         for (Map.Entry<String, Integer> entry : nameToIndex.entrySet()) {
@@ -439,7 +450,6 @@ public class SplitterService {
         Pattern pattern = Pattern.compile(REGEX);
         return pattern.matcher(input);
     }
-
 
     public void secretSanta(String groupName) {
         if (groupService.getGroup(groupName) == null) {

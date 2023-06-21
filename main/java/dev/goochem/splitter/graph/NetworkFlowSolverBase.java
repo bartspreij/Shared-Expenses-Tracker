@@ -1,12 +1,13 @@
 package dev.goochem.splitter.graph;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class NetworkFlowSolverBase {
 
     // To avoid overflow, set infinity to a value less than Long.MAX_VALUE;
-    static final long INF = Long.MAX_VALUE / 2;
+    final BigDecimal INF = BigDecimal.valueOf(Long.MAX_VALUE / 2);
 
     // Inputs: n = number of nodes, s = source, t = sink
     final int n, s, t;
@@ -23,7 +24,7 @@ public abstract class NetworkFlowSolverBase {
     protected boolean solved;
 
     // The maximum flow. Calculated by calling the {@link #solve} method.
-    protected double maxFlow;
+    protected BigDecimal maxFlow;
 
     // The adjacency list representing the flow graph.
     protected List<Edge>[] graph;
@@ -42,6 +43,7 @@ public abstract class NetworkFlowSolverBase {
         this.t = t;
         initializeEmptyFlowGraph();
         visited = new int[n];
+        this.maxFlow = BigDecimal.ZERO;
     }
 
     // Constructs an empty graph with n nodes including s and t.
@@ -54,24 +56,25 @@ public abstract class NetworkFlowSolverBase {
     /**
      * Adds a directed edge (and its residual edge) to the flow graph.
      *
-     * @param from - The index of the node the directed edge starts at.
-     * @param to - The index of the node the directed edge ends at.
+     * @param from     - The index of the node the directed edge starts at.
+     * @param to       - The index of the node the directed edge ends at.
      * @param capacity - The capacity of the edge
      */
-    public void addEdge(int from, int to, double capacity) {
-        if (capacity <= 0) throw new IllegalArgumentException("Forward edge capacity <= 0");
+    public void addEdge(int from, int to, BigDecimal capacity) {
+        if (capacity.compareTo(BigDecimal.ZERO) <= 0)
+            throw new IllegalArgumentException("Forward edge capacity <= 0");
         Edge e1 = new Edge(from, to, capacity);
-        Edge e2 = new Edge(to, from, 0);
-        e1.setResidual(e2);
-        e2.setResidual(e1);
+        Edge e2 = new Edge(to, from, BigDecimal.ZERO);
+        e1.residual = e2;
+        e2.residual = e1;
         graph[from].add(e1);
         graph[to].add(e2);
     }
 
     /**
      * Returns the residual graph after the solver has been executed. This allows you to inspect the
-     * {@link Edge#flow} and {@link Edge#capacity} values of each edge. This is useful if you are
-     * debugging or want to figure out which edges were used during the max flow.
+     * {@link Edge#flow} and {@link Edge#capacity} values of each edge.
+     * This is useful if you are debugging or want to figure out which edges were used during the max flow.
      */
     public List<Edge>[] getGraph() {
         execute();
@@ -79,7 +82,7 @@ public abstract class NetworkFlowSolverBase {
     }
 
     // Returns the maximum flow from the source to the sink.
-    public double getMaxFlow() {
+    public BigDecimal getMaxFlow() {
         execute();
         return maxFlow;
     }

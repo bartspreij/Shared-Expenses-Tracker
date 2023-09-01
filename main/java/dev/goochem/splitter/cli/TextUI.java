@@ -23,16 +23,11 @@ public class TextUI {
 
         while (true) {
             String input = scanner.nextLine();
+            String[] commandParts = input.split("\\s+", 2);
             UsageOption usageOption = logic.getUsageOption(input);
 
             switch (usageOption) {
-                case HELP -> {
-                    for (UsageOption option : UsageOption.values()) {
-                        if (!option.equals(UsageOption.DEFAULT)) {
-                            System.out.println(option);
-                        }
-                    }
-                }
+                case HELP -> logic.displayHelp();
                 case BORROW -> logic.borrow(input);
                 case REPAY -> logic.repay(input);
                 case BALANCE -> logic.printBalance(input);

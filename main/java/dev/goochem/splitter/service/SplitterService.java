@@ -6,8 +6,6 @@ import dev.goochem.splitter.cli.UsageOption;
 import dev.goochem.splitter.entities.GroupOfPeople;
 import dev.goochem.splitter.entities.Person;
 import dev.goochem.splitter.entities.Transaction;
-import dev.goochem.splitter.graph.Edge;
-import dev.goochem.splitter.graph.FordFulkersonDfsSolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
@@ -184,71 +182,13 @@ public class SplitterService {
         }
     }
 
+    // TODO: Implement this method with by adding all funds to a pool instead of using DFS and FordFulkerson
     public void printBalancePerfect(String input) {
-        // TODO: refactor by adding sum of owed and lent for super s and super t
-        Map<String, BigDecimal> pairBalances = getBalance(input);
-        final BigDecimal THOUSAND = new BigDecimal(1000);
-
-        Set<String> uniqueNames = new HashSet<>();
-        for (String pair : pairBalances.keySet()) {
-            String[] splitNames = pair.split(" ");
-            uniqueNames.add(splitNames[0]);
-            uniqueNames.add(splitNames[1]);
-        }
-
-        int n = uniqueNames.size() + 2; // for super source and sink
-        int s = n - 2; // super source
-        int t = n - 1; // super sink
-        FordFulkersonDfsSolver solver = new FordFulkersonDfsSolver(n, s, t);
 
 
-        // Create a mapping between names and indices
-        Map<String, Integer> nameToIndex = new HashMap<>();
-        int index = 0;
-        for (String name : uniqueNames) {
-            nameToIndex.put(name, index);
-            index++;
-        }
-
-        for (Map.Entry<String, BigDecimal> entry : pairBalances.entrySet()) {
-            String key = entry.getKey();
-            BigDecimal value = entry.getValue();
-            String[] splitNames = key.split(" ");
-            String name1 = splitNames[0];
-            String name2 = splitNames[1];
-
-            int personId1 = nameToIndex.get(name1);
-            int personId2 = nameToIndex.get(name2);
-
-            solver.addEdge(s, personId1, BigDecimal.valueOf(Long.MAX_VALUE));
-            solver.addEdge(personId1, personId2, value);
-            solver.addEdge(personId2, t, BigDecimal.valueOf(Long.MAX_VALUE));
-        }
-
-        // Prints:
-        // Maximum Flow is: 23
-        System.out.printf("Maximum Flow is: %.2f\n", solver.getMaxFlow());
-
-        List<Edge>[] resultGraph = solver.getGraph();
-
-        // Displays all edges part of the resulting residual graph.
-        for (List<Edge> edges : resultGraph) for (Edge e : edges) System.out.println(e.toString(s, t));
-
-
-        for (List<Edge> edges : resultGraph) {
-            for (Edge e : edges) {
-                if (e.getFlow().compareTo(BigDecimal.ZERO) > 0) {
-                    String from = getKeyByValue(e.getFrom(), nameToIndex);
-                    String to = getKeyByValue(e.getTo(), nameToIndex);
-                    BigDecimal flow = e.getFlow().abs(); // Use absolute value to remove negative sign
-                    System.out.printf("%s owes %s %.2f%n", from, to, flow);
-                }
-            }
-        }
     }
 
-
-    public  String getKeyByValue(int value, Map<String, Integer> nameToIndex) {
+    public String getKeyByValue(int value, Map<String, Integer> nameToIndex) {
         for (Map.Entry<String, Integer> entry : nameToIndex.entrySet()) {
             if (entry.getValue() == value) {
                 return entry.getKey();
@@ -396,9 +336,9 @@ public class SplitterService {
         LocalDate date = dateIncludedOrNot(input);
         Matcher matcher = patternMatcher(isCashBack ? RegexPatterns.CASHBACK_EXTRACT_INFO : RegexPatterns.PURCHASE_EXTRACT_INFO, input);
 
+        // matcher.group(2) is the product which we do not use at the moment.
         if (matcher.find()) {
             Person payer = personService.getOrAdd(matcher.group(1));
-            String product = matcher.group(2); // not used atm
             double amount = Double.parseDouble(matcher.group(3));
             Set<Person> participants = fetchParticipants(matcher.group(4));
             BigDecimal adjustedAmount = BigDecimal.valueOf(isCashBack ? -amount : amount);
@@ -414,7 +354,7 @@ public class SplitterService {
 
     @Transactional
     public void purchase(LocalDate date, Person payer, BigDecimal amount, Set<Person> participantsList, boolean isCashBack) {
-        if (participantsList.size() == 0) {
+        if (participantsList.isEmpty()) {
             System.out.println("Group is empty");
             return;
         }
@@ -462,7 +402,8 @@ public class SplitterService {
             for (String giver : sortedPeople) {
                 for (String receiver  : randomPeople) {
                     if (!giver.equals(receiver) &&
-                            (personService.getOrAdd(receiver).getSecretSantaRecipient() == null || !personService.getOrAdd(receiver).getSecretSantaRecipient().equals(personService.getOrAdd(giver)))) {
+                            (personService.getOrAdd(receiver).getSecretSantaRecipient() == null ||
+                                    !personService.getOrAdd(receiver).getSecretSantaRecipient().equals(personService.getOrAdd(giver)))) {
 
                         System.out.printf("%s gift to %s\n", giver, receiver);
                         personService.getOrAdd(giver).setSecretSantaRecipient(personService.getOrAdd(receiver));
@@ -483,6 +424,14 @@ public class SplitterService {
         switch (openOrClose) {
             case "open" -> transactionService.deleteByDateIsLessThan(date.withDayOfMonth(1));
             case "close" -> transactionService.deleteByDateIsLessThanEqual(date);
+        }
+    }
+
+    public void displayHelp() {
+        for (UsageOption option : UsageOption.values()) {
+            if (!option.equals(UsageOption.DEFAULT)) {
+                System.out.println(option);
+            }
         }
     }
 }
